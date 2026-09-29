@@ -38,14 +38,15 @@ from pathlib import Path
 import numpy as np
 import joblib
 
-from pca_analysis import load_dataset, run_pca
+import argparse
+from pipeline import load_dataset, run_pca
 from quantum_risk_model import QuantumFeatureMap
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
-ARTIFACT_DIR = Path(__file__).parent / "artifacts"
+N_LAYERS = 3
 
 N_LAYERS = 3
 N_COMPONENTS = 4
@@ -54,10 +55,53 @@ QFM_SEED = 42
 
 
 def main():
-    ARTIFACT_DIR.mkdir(exist_ok=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--disease", type=str, default="breast_cancer")
+    args = parser.parse_args()
+    disease = args.disease
 
-    # --- Load WDBC dataset (6 features, labels: 1=malignant, 0=benign) ---
-    X_df, y = load_dataset()
+    # Dynamically set artifact dir
+    artifact_dir = Path(__file__).parent / "artifacts" / disease
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+
+    # --- Load dataset ---
+    X_df, y = load_dataset(disease)
+    
+    # Train-test split (do this before imputation to prevent data leakage)
+    # We will compute the median on the train set only
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_df, y, test_size=0.25, random_state=42, stratify=y
+    )
+
+    train_medians = {}
+    if disease == "diabetes":
+        # Impute missing values with train set medians
+        for col in X_train.columns:
+            if X_train[col].isnull().any():
+                median_val = X_train[col].median()
+                train_medians[col] = median_val
+                X_train[col] = X_train[col].fillna(median_val)
+                X_test[col] = X_test[col].fillna(median_val)
+        
+        # Save train_medians for inference
+        with open(artifact_dir / "train_medians.json", "w") as f:
+            json.dump(train_medians, f, indent=2)
+
+    # Recombine to fit PCA (fit on whole dataset? Wait, original code fits PCA on the whole dataset `run_pca(X_df)`. 
+    # But now X_train and X_test are imputed. I should fit PCA on the imputed data.
+    # Actually, original code did:
+    # X_df, y = load_dataset()
+    # pca_result = run_pca(X_df, n_components=N_COMPONENTS)
+    # X = np.pi * (X_raw_components / angle_scale)
+    # X_train, X_test, y_train, y_test = train_test_split(...)
+    
+    # To keep original breast_cancer behavior exactly identical, I should do imputation, then run_pca, then split again? No, splitting again might give different results if the indices change. I'll just recombine them in the original order, or better, keep the train/test splits that were created and run PCA on the full recombined imputed dataset.
+    # Actually, the original train_test_split used `stratify=y` with `random_state=42`. 
+    # If I just fill X_df with the computed medians:
+    if disease == "diabetes":
+        for col, median_val in train_medians.items():
+            X_df[col] = X_df[col].fillna(median_val)
+
     pca_result = run_pca(X_df, n_components=N_COMPONENTS)
 
     X_raw_components = pca_result["components"]
@@ -131,16 +175,16 @@ def main():
     print(f"{'ROC-AUC':<12} | {h_roc_auc:<15.3f} | {c_roc_auc:<15.3f}")
 
     # --- Save everything the API needs ---
-    with open(ARTIFACT_DIR / "scaler.pkl", "wb") as f:
+    with open(artifact_dir / "scaler.pkl", "wb") as f:
         pickle.dump(pca_result["scaler"], f)
-    with open(ARTIFACT_DIR / "pca.pkl", "wb") as f:
+    with open(artifact_dir / "pca.pkl", "wb") as f:
         pickle.dump(pca_result["pca"], f)
 
     # Hybrid model (XGBoost trained on quantum-transformed features)
-    joblib.dump(hybrid_model, ARTIFACT_DIR / "hybrid_model.joblib")
+    joblib.dump(hybrid_model, artifact_dir / "hybrid_model.joblib")
 
     # Classical baseline (RBF SVM on raw PCA features)
-    joblib.dump(svm_clf, ARTIFACT_DIR / "classical_baseline.joblib")
+    joblib.dump(svm_clf, artifact_dir / "classical_baseline.joblib")
 
     # Save metrics for UI consumption
     metrics = {
@@ -159,14 +203,14 @@ def main():
             "roc_auc": c_roc_auc,
         },
     }
-    with open(ARTIFACT_DIR / "metrics.json", "w") as f:
+    with open(artifact_dir / "metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
 
     # SHAP background sample — 25 samples, quantum-transformed, as specified
     # in PROJECT_CONTEXT.md. These are used by KernelExplainer in the API.
     background_idx = np.random.choice(len(X), size=min(25, len(X)), replace=False)
     X_background_q = qfm.transform(X[background_idx])
-    np.save(ARTIFACT_DIR / "background.npy", X_background_q)
+    np.save(artifact_dir / "background.npy", X_background_q)
 
     # For each component, note which 2 raw features it leans on most, so the
     # API can turn "PC2 pushed risk up" into something a clinician can read.
@@ -192,16 +236,16 @@ def main():
         "hybrid_roc_auc": h_roc_auc,
         "classical_accuracy": c_accuracy,
     }
-    with open(ARTIFACT_DIR / "meta.json", "w") as f:
+    with open(artifact_dir / "meta.json", "w") as f:
         json.dump(meta, f, indent=2)
 
     # Clean up old VQC weights file if it exists (no longer needed)
-    old_weights = ARTIFACT_DIR / "vqc_weights.npy"
+    old_weights = artifact_dir / "vqc_weights.npy"
     if old_weights.exists():
         old_weights.unlink()
         print("Removed old vqc_weights.npy (no longer needed)")
 
-    print(f"\nSaved trained hybrid pipeline to {ARTIFACT_DIR}/")
+    print(f"\nSaved trained hybrid pipeline to {artifact_dir}/")
 
 
 if __name__ == "__main__":

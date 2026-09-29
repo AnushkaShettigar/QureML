@@ -290,48 +290,85 @@ export default function App() {
     worst_radius: 25.38,
     worst_perimeter: 184.6,
     mean_area: 1001.0,
-    mean_texture: 10.38
+    mean_texture: 10.38,
+    // Diabetes specific defaults
+    height_cm: 165,
+    weight_kg: 88,
+    glucose: 117,
+    age: 29,
+    blood_pressure: 72,
+    insulin: "",
+    diabetes_pedigree: "0.37"
   });
 
   const [calculatedRisk, setCalculatedRisk] = useState(null);
   const [samplePatients, setSamplePatients] = useState([]);
   const [modelMetrics, setModelMetrics] = useState(null);
+  
+  const [diseases, setDiseases] = useState({});
+  const [selectedDisease, setSelectedDisease] = useState("breast_cancer");
 
   useEffect(() => {
-    fetch("http://localhost:8000/sample-patients")
+    fetch("http://localhost:8000/diseases")
       .then(res => res.json())
-      .then(data => setSamplePatients(data))
-      .catch(err => console.error("Could not load sample patients:", err));
+      .then(data => setDiseases(data))
+      .catch(err => console.error("Could not load diseases:", err));
+      
     fetch("http://localhost:8000/health")
       .then(res => res.json())
       .then(data => {
         if (data.status === "ok") {
-          setModelMetrics({
-            hybridAccuracy: data.hybrid_accuracy,
-            classicalAccuracy: data.classical_accuracy,
-            hybridF1: data.hybrid_f1,
-            hybridRocAuc: data.hybrid_roc_auc,
-          });
+          setModelMetrics(data);
         }
       })
       .catch(err => console.error("Could not load model metrics:", err));
   }, []);
+
+  useEffect(() => {
+    fetch(`http://localhost:8000/sample-patients?disease_type=${selectedDisease}`)
+      .then(res => res.json())
+      .then(data => setSamplePatients(data))
+      .catch(err => console.error("Could not load sample patients:", err));
+  }, [selectedDisease]);
 
   const handleSampleSelect = (e) => {
     const pId = e.target.value;
     if (!pId) return;
     const p = samplePatients.find(x => x.id === pId);
     if (p) {
-      setFormData(prev => ({
-        ...prev,
-        patientName: p.name,
-        worst_concave_points: p.worst_concave_points,
-        mean_concave_points: p.mean_concave_points,
-        worst_radius: p.worst_radius,
-        worst_perimeter: p.worst_perimeter,
-        mean_area: p.mean_area,
-        mean_texture: p.mean_texture
-      }));
+      if (selectedDisease === "breast_cancer") {
+        setFormData(prev => ({
+          ...prev,
+          patientName: p.name,
+          worst_concave_points: p.worst_concave_points,
+          mean_concave_points: p.mean_concave_points,
+          worst_radius: p.worst_radius,
+          worst_perimeter: p.worst_perimeter,
+          mean_area: p.mean_area,
+          mean_texture: p.mean_texture
+        }));
+      } else {
+        const h_m = 1.70;
+        const w_kg = (p.bmi || 32.3) * (h_m * h_m);
+        
+        // Use default map for family history to match UI options closest
+        let closest_pedigree = "0.37";
+        if (p.diabetes_pedigree <= 0.3) closest_pedigree = "0.24";
+        else if (p.diabetes_pedigree >= 0.5) closest_pedigree = "0.63";
+        else closest_pedigree = "0.37";
+
+        setFormData(prev => ({
+          ...prev,
+          patientName: p.name,
+          height_cm: 170,
+          weight_kg: Math.round(w_kg * 10) / 10,
+          glucose: p.glucose || 117,
+          age: p.age || 29,
+          blood_pressure: p.blood_pressure || 72,
+          insulin: p.insulin ?? "",
+          diabetes_pedigree: closest_pedigree
+        }));
+      }
     }
   };
 
@@ -463,16 +500,35 @@ export default function App() {
     setIsCalculating(true);
 
     try {
-      const response = await fetch(QRISK_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      let featuresToSend = {};
+      if (selectedDisease === "breast_cancer") {
+        featuresToSend = {
           worst_concave_points: Number(formData.worst_concave_points),
           mean_concave_points: Number(formData.mean_concave_points),
           worst_radius: Number(formData.worst_radius),
           worst_perimeter: Number(formData.worst_perimeter),
           mean_area: Number(formData.mean_area),
           mean_texture: Number(formData.mean_texture)
+        };
+      } else {
+        const h_m = Number(formData.height_cm) / 100;
+        const computedBmi = Number(formData.weight_kg) / (h_m * h_m);
+        featuresToSend = {
+          glucose: Number(formData.glucose),
+          bmi: computedBmi,
+          age: Number(formData.age),
+          blood_pressure: Number(formData.blood_pressure),
+          diabetes_pedigree: Number(formData.diabetes_pedigree),
+          insulin: formData.insulin === "" || formData.insulin === null ? null : Number(formData.insulin)
+        };
+      }
+
+      const response = await fetch(QRISK_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          disease_type: selectedDisease,
+          features: featuresToSend
         })
       });
 
@@ -500,8 +556,11 @@ export default function App() {
         classicalLabel: prediction.classicalLabel,
         modelsAgree: prediction.modelsAgree,
         note: prediction.note,
-        calcification: "Pleomorphic",
-        id: `BC-${Math.floor(1000 + Math.random() * 9000)}`
+        calcification: selectedDisease === "breast_cancer" ? "Pleomorphic" : "N/A",
+        imputed_features: prediction.imputed_features || [],
+        id: selectedDisease === "breast_cancer" 
+          ? `BC-${Math.floor(1000 + Math.random() * 9000)}`
+          : `DB-${Math.floor(1000 + Math.random() * 9000)}`
       });
     } catch (err) {
       setRiskError(
@@ -851,18 +910,34 @@ export default function App() {
           <div className="tab-container">
             <header className="page-header">
               <h1>Disease Prediction</h1>
-              <p>Fill in the details below to get an early breast-cancer risk analysis.</p>
+              <p>Fill in the details below to get an early risk analysis.</p>
             </header>
 
             <div className="grid-2col">
               <div className="card-panel">
                 <h2>Personal &amp; Clinical Information</h2>
                 <form onSubmit={handleCalculateRisk} className="intake-form">
+                  <div className="form-group" style={{ paddingBottom: '15px', borderBottom: '1px solid var(--border-color)', marginBottom: '15px' }}>
+                    <label>Disease Type</label>
+                    <select 
+                      value={selectedDisease} 
+                      onChange={(e) => {
+                        setSelectedDisease(e.target.value);
+                        setCalculatedRisk(null);
+                        setRiskError("");
+                      }}
+                    >
+                      {Object.entries(diseases).map(([key, info]) => (
+                        <option key={key} value={key}>{info.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
                   {samplePatients.length > 0 && (
                     <div className="form-group" style={{ paddingBottom: '15px', borderBottom: '1px solid var(--border-color)', marginBottom: '15px' }}>
                       <label>Load Sample Patient (Optional)</label>
                       <select onChange={handleSampleSelect} defaultValue="">
-                        <option value="" disabled>-- Select a pre-loaded WDBC case --</option>
+                        <option value="" disabled>-- Select a pre-loaded case --</option>
                         {samplePatients.map(sp => (
                           <option key={sp.id} value={sp.id}>{sp.name} ({sp.label})</option>
                         ))}
@@ -875,38 +950,88 @@ export default function App() {
                     <input type="text" name="patientName" required placeholder="Jane Doe" value={formData.patientName} onChange={handleFormChange} />
                   </div>
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Worst Concave Points</label>
-                      <input type="number" step="0.0001" name="worst_concave_points" value={formData.worst_concave_points} onChange={handleFormChange} />
-                    </div>
-                    <div className="form-group">
-                      <label>Mean Concave Points</label>
-                      <input type="number" step="0.0001" name="mean_concave_points" value={formData.mean_concave_points} onChange={handleFormChange} />
-                    </div>
-                  </div>
+                  {selectedDisease === "breast_cancer" && (
+                    <>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Worst Concave Points</label>
+                          <input type="number" step="0.0001" name="worst_concave_points" value={formData.worst_concave_points} onChange={handleFormChange} />
+                        </div>
+                        <div className="form-group">
+                          <label>Mean Concave Points</label>
+                          <input type="number" step="0.0001" name="mean_concave_points" value={formData.mean_concave_points} onChange={handleFormChange} />
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Worst Radius</label>
+                          <input type="number" step="0.01" name="worst_radius" value={formData.worst_radius} onChange={handleFormChange} />
+                        </div>
+                        <div className="form-group">
+                          <label>Worst Perimeter</label>
+                          <input type="number" step="0.01" name="worst_perimeter" value={formData.worst_perimeter} onChange={handleFormChange} />
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Mean Area</label>
+                          <input type="number" step="0.1" name="mean_area" value={formData.mean_area} onChange={handleFormChange} />
+                        </div>
+                        <div className="form-group">
+                          <label>Mean Texture</label>
+                          <input type="number" step="0.01" name="mean_texture" value={formData.mean_texture} onChange={handleFormChange} />
+                        </div>
+                      </div>
+                    </>
+                  )}
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Worst Radius</label>
-                      <input type="number" step="0.01" name="worst_radius" value={formData.worst_radius} onChange={handleFormChange} />
-                    </div>
-                    <div className="form-group">
-                      <label>Worst Perimeter</label>
-                      <input type="number" step="0.01" name="worst_perimeter" value={formData.worst_perimeter} onChange={handleFormChange} />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Mean Area</label>
-                      <input type="number" step="0.1" name="mean_area" value={formData.mean_area} onChange={handleFormChange} />
-                    </div>
-                    <div className="form-group">
-                      <label>Mean Texture</label>
-                      <input type="number" step="0.01" name="mean_texture" value={formData.mean_texture} onChange={handleFormChange} />
-                    </div>
-                  </div>
+                  {selectedDisease === "diabetes" && (
+                    <>
+                      <p className="sub-text" style={{marginBottom: "10px", fontStyle: "italic"}}>
+                        Note: this model was trained on female patients aged 21+ and is not meant for men or children.
+                      </p>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>2-hour glucose (after glucose tolerance test) (mg/dL)</label>
+                          <input type="number" step="1" name="glucose" required value={formData.glucose} onChange={handleFormChange} />
+                        </div>
+                        <div className="form-group">
+                          <label>Age (years)</label>
+                          <input type="number" step="1" name="age" required value={formData.age} onChange={handleFormChange} />
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Height (cm)</label>
+                          <input type="number" step="1" name="height_cm" required value={formData.height_cm} onChange={handleFormChange} />
+                        </div>
+                        <div className="form-group">
+                          <label>Weight (kg)</label>
+                          <input type="number" step="0.1" name="weight_kg" required value={formData.weight_kg} onChange={handleFormChange} />
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Diastolic blood pressure (mmHg)</label>
+                          <input type="number" step="1" name="blood_pressure" required value={formData.blood_pressure} onChange={handleFormChange} />
+                        </div>
+                        <div className="form-group">
+                          <label>2-hour serum insulin (µU/ml) (Optional)</label>
+                          <input type="number" step="1" name="insulin" value={formData.insulin} onChange={handleFormChange} />
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label title="This mapping is our own demo approximation, not a clinical scale">
+                          Family history of diabetes ℹ️
+                        </label>
+                        <select name="diabetes_pedigree" value={formData.diabetes_pedigree} onChange={handleFormChange}>
+                          <option value="0.24">No known family history</option>
+                          <option value="0.37">One relative with diabetes</option>
+                          <option value="0.63">Multiple close relatives</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
 
                   <button type="submit" className="action-btn" disabled={isCalculating}>
                     {isCalculating ? "Analyzing…" : "Run Early Detection"}
@@ -948,6 +1073,12 @@ export default function App() {
                         </span>
                       )}
                     </div>
+
+                    {calculatedRisk.imputed_features && calculatedRisk.imputed_features.length > 0 && (
+                      <div className="auth-error" style={{backgroundColor: "var(--hiq-card-hover)", color: "var(--text-main)", marginBottom: "1rem", textAlign: "left"}}>
+                        <span style={{color: "var(--hiq-warning)"}}>ℹ️</span> Note: The following features were left blank and estimated from dataset median: {calculatedRisk.imputed_features.join(', ')}
+                      </div>
+                    )}
 
                     {calculatedRisk.explanation && calculatedRisk.explanation.length > 0 ? (
                       <div className="factor-list">

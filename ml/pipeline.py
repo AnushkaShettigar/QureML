@@ -55,7 +55,7 @@ FEATURE_DISPLAY_NAMES = [
 CSV_PATH = Path(__file__).parent.parent / "wisconstin.csv"
 
 
-def load_dataset() -> tuple[pd.DataFrame, np.ndarray]:
+def _load_breast_cancer() -> tuple[pd.DataFrame, np.ndarray]:
     """
     Load the WDBC dataset from the CSV file, select the 6 target features,
     and return (X_dataframe, y_labels).
@@ -72,6 +72,27 @@ def load_dataset() -> tuple[pd.DataFrame, np.ndarray]:
     y = (df["diagnosis"] == "M").astype(int).values
 
     return X, y
+
+
+def _load_diabetes() -> tuple[pd.DataFrame, np.ndarray]:
+    url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv"
+    names = ["pregnancies", "glucose", "blood_pressure", "skin_thickness",
+             "insulin", "bmi", "diabetes_pedigree", "age", "outcome"]
+    df = pd.read_csv(url, names=names)
+    
+    cols_to_clean = ["glucose", "blood_pressure", "skin_thickness", "insulin", "bmi"]
+    df[cols_to_clean] = df[cols_to_clean].replace(0, np.nan)
+    
+    selected = ["glucose", "bmi", "age", "diabetes_pedigree", "blood_pressure", "insulin"]
+    X = df[selected].copy()
+    y = df["outcome"].values
+    return X, y
+
+
+def load_dataset(disease_key: str = "breast_cancer") -> tuple[pd.DataFrame, np.ndarray]:
+    if disease_key == "diabetes":
+        return _load_diabetes()
+    return _load_breast_cancer()
 
 
 def run_pca(X: pd.DataFrame, n_components: int = 4):

@@ -35,15 +35,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from diseases import DISEASES
 from quantum_risk_model import QuantumFeatureMap
-
-ARTIFACT_DIR = Path(__file__).parent / "artifacts"
 
 app = FastAPI(title="QRISK Prediction API")
 
-# Allows the Vite dev server (typically http://localhost:5173) to call this
-# API from the browser. Tighten this to your real domain before deploying
-# anywhere public.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -52,17 +48,9 @@ app.add_middleware(
 )
 
 
-class ScreeningInput(BaseModel):
-    """
-    The 6 WDBC features used by our model. These map directly to columns
-    in the Wisconsin Diagnostic Breast Cancer dataset.
-    """
-    worst_concave_points: float
-    mean_concave_points: float
-    worst_radius: float
-    worst_perimeter: float
-    mean_area: float
-    mean_texture: float
+class PredictionRequest(BaseModel):
+    disease_type: str
+    features: dict[str, float | None]
 
 
 class ComponentImpact(BaseModel):
@@ -86,77 +74,75 @@ class PredictionResult(BaseModel):
     classicalTestAccuracy: float
     explanation: list[ComponentImpact]
     note: str
+    imputed_features: list[str] = []
 
 
 # --- Load everything once at startup, not per-request ---
-try:
-    with open(ARTIFACT_DIR / "scaler.pkl", "rb") as f:
-        scaler = pickle.load(f)
-    with open(ARTIFACT_DIR / "pca.pkl", "rb") as f:
-        pca = pickle.load(f)
-    with open(ARTIFACT_DIR / "meta.json") as f:
-        meta = json.load(f)
+DISEASE_MODELS = {}
+MODEL_READY = False
+MODEL_LOAD_ERROR = None
 
-    # Re-instantiate QuantumFeatureMap with the same seed (no weights file needed)
-    qfm = QuantumFeatureMap(
-        n_qubits=meta["n_qubits"],
-        n_layers=meta["n_layers"],
-        seed=meta["qfm_seed"],
-    )
+for d_key, d_info in DISEASES.items():
+    a_dir = Path(__file__).parent / d_info["models_dir"]
+    try:
+        with open(a_dir / "scaler.pkl", "rb") as f:
+            scaler = pickle.load(f)
+        with open(a_dir / "pca.pkl", "rb") as f:
+            pca = pickle.load(f)
+        with open(a_dir / "meta.json") as f:
+            meta = json.load(f)
 
-    # Load the trained hybrid classifier (XGBoost on quantum-transformed features)
-    hybrid_model = joblib.load(ARTIFACT_DIR / "hybrid_model.joblib")
+        qfm = QuantumFeatureMap(
+            n_qubits=meta["n_qubits"],
+            n_layers=meta["n_layers"],
+            seed=meta["qfm_seed"],
+        )
+        hybrid_model = joblib.load(a_dir / "hybrid_model.joblib")
+        svm_clf = joblib.load(a_dir / "classical_baseline.joblib")
+        background = np.load(a_dir / "background.npy")
+        
+        train_medians = {}
+        if (a_dir / "train_medians.json").exists():
+            with open(a_dir / "train_medians.json") as f:
+                train_medians = json.load(f)
 
-    # Load the classical baseline (RBF SVM on raw PCA features)
-    svm_clf = joblib.load(ARTIFACT_DIR / "classical_baseline.joblib")
+        DISEASE_MODELS[d_key] = {
+            "scaler": scaler,
+            "pca": pca,
+            "meta": meta,
+            "qfm": qfm,
+            "hybrid_model": hybrid_model,
+            "svm_clf": svm_clf,
+            "background": background,
+            "train_medians": train_medians
+        }
+        MODEL_READY = True
+    except FileNotFoundError as e:
+        if not MODEL_READY:
+            MODEL_LOAD_ERROR = str(e)
+        print(f"Warning: Models for {d_key} not found. Error: {e}")
 
-    background = np.load(ARTIFACT_DIR / "background.npy")
-
-    MODEL_READY = True
-    MODEL_LOAD_ERROR = None
-except FileNotFoundError as e:
-    MODEL_READY = False
-    MODEL_LOAD_ERROR = str(e)
-
-
-def form_to_raw_features(x: ScreeningInput) -> np.ndarray:
-    """Map the screening input to the raw feature vector in the exact order
-    the model was trained on (meta['feature_names'])."""
-    values = {
-        "Worst Concave Points": x.worst_concave_points,
-        "Mean Concave Points": x.mean_concave_points,
-        "Worst Radius": x.worst_radius,
-        "Worst Perimeter": x.worst_perimeter,
-        "Mean Area": x.mean_area,
-        "Mean Texture": x.mean_texture,
-    }
-    return np.array([values[name] for name in meta["feature_names"]], dtype=float)
+def hybrid_predict_fn(X_batch: np.ndarray, model) -> np.ndarray:
+    """Predict function for SHAP — wraps the hybrid pipeline."""
+    return model.predict_proba(X_batch)[:, 1]
 
 
-def hybrid_predict_fn(X_batch: np.ndarray) -> np.ndarray:
-    """Predict function for SHAP — wraps the hybrid pipeline.
-    Input is already quantum-transformed features."""
-    return hybrid_model.predict_proba(X_batch)[:, 1]
-
+@app.get("/diseases")
+def get_diseases():
+    return DISEASES
 
 @app.get("/health")
 def health():
     if not MODEL_READY:
         return {"status": "not_ready", "error": MODEL_LOAD_ERROR}
-    return {
-        "status": "ok",
-        "hybrid_accuracy": meta.get("hybrid_accuracy", 0.0),
-        "classical_accuracy": meta.get("classical_accuracy", 0.0),
-        "hybrid_f1": meta.get("hybrid_f1"),
-        "hybrid_roc_auc": meta.get("hybrid_roc_auc"),
-    }
+    return {"status": "ok", "loaded_diseases": list(DISEASE_MODELS.keys())}
 
 
 @app.get("/features")
-def features():
-    """Return the list of feature names and display info the frontend needs."""
-    if not MODEL_READY:
-        raise HTTPException(status_code=503, detail="Model not ready")
+def features(disease_type: str = "breast_cancer"):
+    if disease_type not in DISEASE_MODELS:
+        raise HTTPException(status_code=404, detail="Disease model not ready")
+    meta = DISEASE_MODELS[disease_type]["meta"]
     return {
         "feature_names": meta["feature_names"],
         "n_qubits": meta["n_qubits"],
@@ -165,24 +151,60 @@ def features():
 
 
 @app.get("/sample-patients")
-def sample_patients():
-    """Return a list of pre-selected patients from the WDBC dataset."""
-    sample_path = ARTIFACT_DIR / "sample_patients.json"
+def sample_patients(disease_type: str = "breast_cancer"):
+    if disease_type not in DISEASES:
+        raise HTTPException(status_code=404, detail="Disease not found")
+    
+    sample_path = Path(__file__).parent / DISEASES[disease_type]["models_dir"] / "sample_patients.json"
     if not sample_path.exists():
-        raise HTTPException(status_code=404, detail="Sample patients not found. Run generate_samples.py first.")
+        raise HTTPException(status_code=404, detail="Sample patients not found.")
     with open(sample_path) as f:
         return json.load(f)
 
 
 @app.post("/predict", response_model=PredictionResult)
-def predict(x: ScreeningInput):
-    if not MODEL_READY:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Model artifacts not found ({MODEL_LOAD_ERROR}). Run train_and_save.py first.",
-        )
+def predict(req: PredictionRequest):
+    if req.disease_type not in DISEASE_MODELS:
+        raise HTTPException(status_code=404, detail=f"Model for {req.disease_type} not found.")
 
-    raw = form_to_raw_features(x).reshape(1, -1)
+    model_data = DISEASE_MODELS[req.disease_type]
+    meta = model_data["meta"]
+    scaler = model_data["scaler"]
+    pca = model_data["pca"]
+    qfm = model_data["qfm"]
+    hybrid_model = model_data["hybrid_model"]
+    svm_clf = model_data["svm_clf"]
+    background = model_data["background"]
+    train_medians = model_data.get("train_medians", {})
+
+    imputed_features = []
+    raw_features = []
+
+    # Map form keys like worst_concave_points to "Worst Concave Points" if needed, 
+    # but the frontend for diabetes sends lowercase keys like "insulin" which match the meta["feature_names"].
+    # Wait, for breast_cancer, the frontend sends `worst_concave_points`, but meta expects `Worst Concave Points`.
+    # Let's handle mapping gracefully.
+    
+    # Simple mapping logic for frontend keys to meta names
+    def normalize_key(k: str) -> str:
+        return k.lower().replace(" ", "_")
+
+    input_map = {normalize_key(k): v for k, v in req.features.items()}
+
+    for fname in meta["feature_names"]:
+        norm_fname = normalize_key(fname)
+        val = input_map.get(norm_fname)
+        
+        if val is None:
+            if fname in train_medians:
+                val = train_medians[fname]
+                imputed_features.append(fname)
+            else:
+                raise HTTPException(status_code=422, detail=f"Missing required feature: {fname}")
+        
+        raw_features.append(val)
+
+    raw = np.array(raw_features, dtype=float).reshape(1, -1)
     scaled = scaler.transform(raw)
     pca_components = pca.transform(scaled)[0]
     angles = np.pi * (pca_components / meta["angle_scale"])
@@ -192,22 +214,29 @@ def predict(x: ScreeningInput):
     q_features = qfm.transform(angles_2d)
     hybrid_proba = float(hybrid_model.predict_proba(q_features)[0, 1])
     hybrid_risk_score = int(np.clip(round(hybrid_proba * 100), 1, 99))
-    hybrid_label = "Malignant" if hybrid_proba > 0.5 else "Benign"
+    
+    # Diabetes specific logic for labelling: if proba > 0.5 then Diabetic, else Non-Diabetic
+    if req.disease_type == "diabetes":
+        hybrid_label = "Diabetic" if hybrid_proba > 0.5 else "Non-Diabetic"
+    else:
+        hybrid_label = "Malignant" if hybrid_proba > 0.5 else "Benign"
 
     # --- Classical baseline: raw PCA → SVM (no quantum step) ---
     c_proba = float(svm_clf.predict_proba(angles_2d)[0, 1])
     classical_risk_score = int(np.clip(round(c_proba * 100), 1, 99))
-    classical_label = "Malignant" if c_proba > 0.5 else "Benign"
+    if req.disease_type == "diabetes":
+        classical_label = "Diabetic" if c_proba > 0.5 else "Non-Diabetic"
+    else:
+        classical_label = "Malignant" if c_proba > 0.5 else "Benign"
 
-    # Agreement check
     models_agree = hybrid_label == classical_label
-
     priority = "High" if hybrid_risk_score > 70 else "Moderate" if hybrid_risk_score > 40 else "Low"
     survival_rate = f"{max(60, 100 - round(hybrid_risk_score * 0.4))}%"
 
-    # SHAP explanation: which quantum-transformed components drove the hybrid
-    # score, and which raw clinical features those components trace back to.
-    explainer = shap.KernelExplainer(hybrid_predict_fn, background)
+    def bound_predict_fn(X_batch):
+        return hybrid_predict_fn(X_batch, hybrid_model)
+
+    explainer = shap.KernelExplainer(bound_predict_fn, background)
     shap_values = explainer.shap_values(q_features, nsamples=60)[0]
 
     explanation = []
@@ -234,6 +263,7 @@ def predict(x: ScreeningInput):
         survivalRate=survival_rate,
         hybridTestAccuracy=meta.get("hybrid_accuracy", 0.0),
         classicalTestAccuracy=meta.get("classical_accuracy", 0.0),
-        explanation=explanation[:3],  # top 3 drivers is plenty for the UI
+        explanation=explanation[:3],
         note="Hybrid = Quantum Feature Map + XGBoost. Baseline = RBF SVM (no quantum).",
+        imputed_features=imputed_features
     )
