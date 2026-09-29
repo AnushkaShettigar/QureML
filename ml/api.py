@@ -263,7 +263,7 @@ def predict(req: PredictionRequest):
         survivalRate=survival_rate,
         hybridTestAccuracy=meta.get("hybrid_accuracy", 0.0),
         classicalTestAccuracy=meta.get("classical_accuracy", 0.0),
-        explanation=explanation[:3],
+        explanation=explanation,
         note="Hybrid = Quantum Feature Map + XGBoost. Baseline = RBF SVM (no quantum).",
         imputed_features=imputed_features
     )

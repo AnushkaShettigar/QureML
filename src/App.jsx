@@ -1185,6 +1185,7 @@ export default function App() {
                           .filter((f, index, self) => 
                             self.findIndex(t => t.displayLabel === f.displayLabel) === index
                           )
+                          .slice(0, 3)
                           .map((f, i) => (
                           <div className="factor-row" key={i}>
                             <span title={f.displayLabel}>{f.displayLabel}</span>

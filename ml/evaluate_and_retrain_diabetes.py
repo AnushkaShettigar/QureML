@@ -253,9 +253,31 @@ def main():
     pca_step = prep_pipeline.named_steps['pca']
     loadings = pca_step.components_
     top_features_per_component = []
+    seen_pairs = set()
+
     for row in loadings:
-        top_idx = np.argsort(-np.abs(row))[:2]
-        top_features_per_component.append([selected_features[i] for i in top_idx])
+        sorted_idx = np.argsort(-np.abs(row))
+        pair = None
+        
+        # Find the best pair that hasn't been used yet
+        for i in range(len(sorted_idx)):
+            for j in range(i + 1, len(sorted_idx)):
+                f1 = selected_features[sorted_idx[i]]
+                f2 = selected_features[sorted_idx[j]]
+                # Sort alphabetically to treat (A, B) same as (B, A)
+                p_key = tuple(sorted([f1, f2]))
+                if p_key not in seen_pairs:
+                    pair = [f1, f2]
+                    seen_pairs.add(p_key)
+                    break
+            if pair:
+                break
+                
+        if not pair:
+            # Fallback if somehow all combinations are exhausted
+            pair = [selected_features[sorted_idx[0]], selected_features[sorted_idx[1]]]
+            
+        top_features_per_component.append(pair)
         
     meta = {
         "feature_names": [f.lower().replace(" ", "_") for f in selected_features], # keep lower case for frontend
