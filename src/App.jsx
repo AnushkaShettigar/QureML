@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import QuantumBackground from "./QuantumBackground.jsx";
 
 // Initial Mock Patient Database
 const initialPatients = [
@@ -51,7 +52,7 @@ const ACCOUNTS_KEY = "qrisk_accounts_v1";
 // a manual registration step.
 function seedDefaultAccounts() {
   // Set your preferred static credentials here
-  const adminPassword = "123456"; 
+  const adminPassword = "123456";
   const userPassword = "123456";
 
   const accounts = [
@@ -201,6 +202,35 @@ function RiskHistoryChart({ patients, onSelect }) {
 }
 
 export default function App() {
+  // Interactive quantum background — landing page only
+  const [activeCard, setActiveCard] = useState(null);
+  const clinicianRef = useRef(null);
+  const adminRef = useRef(null);
+  const [cardRects, setCardRects] = useState({
+    clinician: null,
+    admin: null,
+  });
+
+  const updateCardRects = useCallback(() => {
+    setCardRects({
+      clinician: clinicianRef.current
+        ? clinicianRef.current.getBoundingClientRect()
+        : null,
+      admin: adminRef.current
+        ? adminRef.current.getBoundingClientRect()
+        : null,
+    });
+  }, []);
+
+  useEffect(() => {
+    updateCardRects();
+    window.addEventListener("resize", updateCardRects);
+
+    return () => {
+      window.removeEventListener("resize", updateCardRects);
+    };
+  }, [updateCardRects]);
+
   // Authentication & Role State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [role, setRole] = useState(null); // 'user' or 'admin'
@@ -304,7 +334,7 @@ export default function App() {
   const [calculatedRisk, setCalculatedRisk] = useState(null);
   const [samplePatients, setSamplePatients] = useState([]);
   const [modelMetrics, setModelMetrics] = useState(null);
-  
+
   const [diseases, setDiseases] = useState({});
   const [selectedDisease, setSelectedDisease] = useState("breast_cancer");
 
@@ -313,7 +343,7 @@ export default function App() {
       .then(res => res.json())
       .then(data => setDiseases(data))
       .catch(err => console.error("Could not load diseases:", err));
-      
+
     fetch("http://localhost:8000/health")
       .then(res => res.json())
       .then(data => {
@@ -350,7 +380,7 @@ export default function App() {
       } else {
         const h_m = 1.70;
         const w_kg = (p.bmi || 32.3) * (h_m * h_m);
-        
+
         // Use default map for family history to match UI options closest
         let closest_pedigree = "0.37";
         if (p.diabetes_pedigree <= 0.3) closest_pedigree = "0.24";
@@ -558,7 +588,7 @@ export default function App() {
         note: prediction.note,
         calcification: selectedDisease === "breast_cancer" ? "Pleomorphic" : "N/A",
         imputed_features: prediction.imputed_features || [],
-        id: selectedDisease === "breast_cancer" 
+        id: selectedDisease === "breast_cancer"
           ? `BC-${Math.floor(1000 + Math.random() * 9000)}`
           : `DB-${Math.floor(1000 + Math.random() * 9000)}`
       });
@@ -574,7 +604,7 @@ export default function App() {
   const handleSaveToQueue = () => {
     if (!calculatedRisk) return;
     setPatients([calculatedRisk, ...patients]);
-    
+
     // Add entry to logs
     setLogs([{
       id: `LOG-${Math.floor(100 + Math.random() * 900)}`,
@@ -612,6 +642,11 @@ export default function App() {
     return (
       <div className="auth-wrapper">
         <ThemeToggle theme={settings.theme} onToggle={toggleTheme} />
+        <QuantumBackground
+          isDark={settings.theme === "dark"}
+          activeCard={activeCard}
+          cardRects={cardRects}
+        />
         <div className="auth-card">
           <div className="auth-header">
             <div className="auth-logo">🌸</div>
@@ -623,12 +658,40 @@ export default function App() {
             <div className="role-selection">
               <h3>Select Portal View Mode</h3>
               <div className="role-grid">
-                <button className="role-btn" onClick={() => handleRoleSelect("user")}>
+                <button
+                  ref={clinicianRef}
+                  className="role-btn"
+                  onMouseEnter={() => {
+                    updateCardRects();
+                    setActiveCard("clinician");
+                  }}
+                  onMouseLeave={() => setActiveCard(null)}
+                  onFocus={() => {
+                    updateCardRects();
+                    setActiveCard("clinician");
+                  }}
+                  onBlur={() => setActiveCard(null)}
+                  onClick={() => handleRoleSelect("user")}
+                >
                   <span className="role-icon">👩‍⚕️</span>
                   <span className="role-title">Clinician / User View</span>
                   <span className="role-desc">Focus on Patient Screening & Diagnostics</span>
                 </button>
-                <button className="role-btn" onClick={() => handleRoleSelect("admin")}>
+                <button
+                  ref={adminRef}
+                  className="role-btn"
+                  onMouseEnter={() => {
+                    updateCardRects();
+                    setActiveCard("admin");
+                  }}
+                  onMouseLeave={() => setActiveCard(null)}
+                  onFocus={() => {
+                    updateCardRects();
+                    setActiveCard("admin");
+                  }}
+                  onBlur={() => setActiveCard(null)}
+                  onClick={() => handleRoleSelect("admin")}
+                >
                   <span className="role-icon">⚡</span>
                   <span className="role-title">Administrator View</span>
                   <span className="role-desc">Full Database, Priority Queues & Logs</span>
@@ -643,14 +706,14 @@ export default function App() {
               </div>
 
               <div className="auth-tabs">
-                <button 
-                  className={authMode === "login" ? "active" : ""} 
+                <button
+                  className={authMode === "login" ? "active" : ""}
                   onClick={() => setAuthMode("login")}
                 >
                   Sign In
                 </button>
-                <button 
-                  className={authMode === "register" ? "active" : ""} 
+                <button
+                  className={authMode === "register" ? "active" : ""}
                   onClick={() => setAuthMode("register")}
                 >
                   Register
@@ -670,48 +733,48 @@ export default function App() {
               <form onSubmit={handleAuthSubmit} className="auth-form">
                 <div className="form-group">
                   <label>Username / Account ID</label>
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="e.g. dr_khushu" 
-                    value={authData.username} 
-                    onChange={(e) => setAuthData({...authData, username: e.target.value})}
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. dr_khushu"
+                    value={authData.username}
+                    onChange={(e) => setAuthData({ ...authData, username: e.target.value })}
                   />
                 </div>
 
                 {authMode === "register" && (
                   <div className="form-group">
                     <label>Medical Email</label>
-                    <input 
-                      type="email" 
-                      required 
-                      placeholder="doctor@hospital.org" 
-                      value={authData.email} 
-                      onChange={(e) => setAuthData({...authData, email: e.target.value})}
+                    <input
+                      type="email"
+                      required
+                      placeholder="doctor@hospital.org"
+                      value={authData.email}
+                      onChange={(e) => setAuthData({ ...authData, email: e.target.value })}
                     />
                   </div>
                 )}
 
                 <div className="form-group">
                   <label>Password</label>
-                  <input 
-                    type="password" 
-                    required 
-                    placeholder="••••••••" 
-                    value={authData.password} 
-                    onChange={(e) => setAuthData({...authData, password: e.target.value})}
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={authData.password}
+                    onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
                   />
                 </div>
 
                 {authMode === "register" && (
                   <div className="form-group">
                     <label>Confirm Password</label>
-                    <input 
-                      type="password" 
-                      required 
-                      placeholder="••••••••" 
-                      value={authData.confirmPassword} 
-                      onChange={(e) => setAuthData({...authData, confirmPassword: e.target.value})}
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={authData.confirmPassword}
+                      onChange={(e) => setAuthData({ ...authData, confirmPassword: e.target.value })}
                     />
                   </div>
                 )}
@@ -919,8 +982,8 @@ export default function App() {
                 <form onSubmit={handleCalculateRisk} className="intake-form">
                   <div className="form-group" style={{ paddingBottom: '15px', borderBottom: '1px solid var(--border-color)', marginBottom: '15px' }}>
                     <label>Disease Type</label>
-                    <select 
-                      value={selectedDisease} 
+                    <select
+                      value={selectedDisease}
                       onChange={(e) => {
                         setSelectedDisease(e.target.value);
                         setCalculatedRisk(null);
@@ -987,7 +1050,7 @@ export default function App() {
 
                   {selectedDisease === "diabetes" && (
                     <>
-                      <p className="sub-text" style={{marginBottom: "10px", fontStyle: "italic"}}>
+                      <p className="sub-text" style={{ marginBottom: "10px", fontStyle: "italic" }}>
                         Note: this model was trained on female patients aged 21+ and is not meant for men or children.
                       </p>
                       <div className="form-row">
@@ -1075,8 +1138,8 @@ export default function App() {
                     </div>
 
                     {calculatedRisk.imputed_features && calculatedRisk.imputed_features.length > 0 && (
-                      <div className="auth-error" style={{backgroundColor: "var(--hiq-card-hover)", color: "var(--text-main)", marginBottom: "1rem", textAlign: "left"}}>
-                        <span style={{color: "var(--hiq-warning)"}}>ℹ️</span> Note: The following features were left blank and estimated from dataset median: {calculatedRisk.imputed_features.join(', ')}
+                      <div className="auth-error" style={{ backgroundColor: "var(--hiq-card-hover)", color: "var(--text-main)", marginBottom: "1rem", textAlign: "left" }}>
+                        <span style={{ color: "var(--hiq-warning)" }}>ℹ️</span> Note: The following features were left blank and estimated from dataset median: {calculatedRisk.imputed_features.join(', ')}
                       </div>
                     )}
 
