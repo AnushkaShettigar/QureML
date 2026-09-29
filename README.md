@@ -1,4 +1,3 @@
-```markdown
 # QureML: Hybrid Quantum–Classical Clinical Risk Screening
 
 > **Quantum-enhanced representations. Classical intelligence. Human-readable explanations.**
@@ -99,7 +98,6 @@ To ensure honest benchmarking, a classical RBF-SVM baseline processes the exact 
                     │ Risk + Explanation    │
                     └───────────────────────┘
 
-```
 
 ---
 
