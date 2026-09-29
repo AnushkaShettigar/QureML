@@ -1,11 +1,11 @@
 {
   "feature_names": [
-    "glucose",
-    "bmi",
-    "age",
-    "diabetes_pedigree",
-    "blood_pressure",
-    "insulin"
+    "Glucose",
+    "BMI",
+    "Age",
+    "DiabetesPedigreeFunction",
+    "BloodPressure",
+    "Insulin"
   ],
   "component_cols": [
     "PC1",
@@ -15,30 +15,30 @@
   ],
   "component_top_features": [
     [
-      "glucose",
-      "insulin"
+      "Glucose",
+      "Insulin"
     ],
     [
-      "blood_pressure",
-      "age"
+      "DiabetesPedigreeFunction",
+      "Age"
     ],
     [
-      "bmi",
-      "insulin"
+      "BMI",
+      "Insulin"
     ],
     [
-      "diabetes_pedigree",
-      "age"
+      "DiabetesPedigreeFunction",
+      "Age"
     ]
   ],
   "n_qubits": 4,
   "n_layers": 3,
   "qfm_seed": 42,
-  "angle_scale": 6.3343252825959055,
-  "hybrid_accuracy": 0.6614583333333334,
-  "hybrid_precision": 0.5161290322580645,
-  "hybrid_recall": 0.47761194029850745,
-  "hybrid_f1": 0.49612403100775193,
-  "hybrid_roc_auc": 0.6982686567164179,
-  "classical_accuracy": 0.7395833333333334
+  "angle_scale": 6.368213856802424,
+  "hybrid_accuracy": 0.7230769230769231,
+  "hybrid_precision": 0.5875,
+  "hybrid_recall": 0.6911764705882353,
+  "hybrid_f1": 0.6351351351351351,
+  "hybrid_roc_auc": 0.782422417786012,
+  "classical_accuracy": 0.7230769230769231
 }

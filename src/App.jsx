@@ -1,13 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import QuantumBackground from "./QuantumBackground.jsx";
 
-// Initial Mock Patient Database
-const initialPatients = [
-  { id: "BC-1092", name: "Khushu mistry", worst_concave_points: 0.1471, mean_concave_points: 0.0869, worst_radius: 25.38, worst_perimeter: 184.6, mean_area: 1001.0, mean_texture: 10.38, riskScore: 78, priority: "High", survivalRate: "82%" },
-  { id: "BC-1093", name: "Anushka shetiigar", worst_concave_points: 0.05, mean_concave_points: 0.03, worst_radius: 12.0, worst_perimeter: 80.0, mean_area: 500.0, mean_texture: 15.0, riskScore: 32, priority: "Low", survivalRate: "96%" },
-  { id: "BC-1094", name: "Ashmit Goyal", worst_concave_points: 0.2, mean_concave_points: 0.1, worst_radius: 30.0, worst_perimeter: 200.0, mean_area: 1500.0, mean_texture: 20.0, riskScore: 89, priority: "High", survivalRate: "74%" },
-  { id: "BC-1095", name: "prishaaa", worst_concave_points: 0.1, mean_concave_points: 0.05, worst_radius: 18.0, worst_perimeter: 120.0, mean_area: 800.0, mean_texture: 12.0, riskScore: 54, priority: "Moderate", survivalRate: "91%" }
-];
+// Feature Display Labels
+const featureLabelMap = {
+  "DiabetesPedigreeFunction": "Family history score",
+  "BloodPressure": "Blood pressure",
+  "BMI": "BMI",
+  "Glucose": "2-hour glucose",
+  "Insulin": "Insulin",
+  "Age": "Age",
+  "SkinThickness": "Skin thickness",
+  "Pregnancies": "Pregnancies",
+  "worst_concave_points": "Worst concave points",
+  "mean_concave_points": "Mean concave points",
+  "worst_radius": "Worst radius",
+  "worst_perimeter": "Worst perimeter",
+  "mean_area": "Mean area",
+  "mean_texture": "Mean texture"
+};
 
 // Initial Audit Logs (Admin View)
 const initialLogs = [
@@ -305,7 +315,7 @@ export default function App() {
   // Patient Database State
   const [patients, setPatients] = useState(() => {
     const saved = localStorage.getItem("qrisk_patients_v3");
-    return saved ? JSON.parse(saved) : initialPatients;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [logs, setLogs] = useState(initialLogs);
@@ -334,17 +344,16 @@ export default function App() {
   const [calculatedRisk, setCalculatedRisk] = useState(null);
   const [samplePatients, setSamplePatients] = useState([]);
   const [modelMetrics, setModelMetrics] = useState(null);
-
   const [diseases, setDiseases] = useState({});
   const [selectedDisease, setSelectedDisease] = useState("breast_cancer");
 
   useEffect(() => {
-    fetch("http://localhost:8000/diseases")
+    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    fetch(`${API_BASE}/diseases`)
       .then(res => res.json())
       .then(data => setDiseases(data))
       .catch(err => console.error("Could not load diseases:", err));
-
-    fetch("http://localhost:8000/health")
+    fetch(`${API_BASE}/health`)
       .then(res => res.json())
       .then(data => {
         if (data.status === "ok") {
@@ -355,7 +364,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/sample-patients?disease_type=${selectedDisease}`)
+    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    fetch(`${API_BASE}/sample-patients?disease_type=${selectedDisease}`)
       .then(res => res.json())
       .then(data => setSamplePatients(data))
       .catch(err => console.error("Could not load sample patients:", err));
@@ -521,7 +531,8 @@ export default function App() {
 
   // Base URL of the local ML API (see ml/api.py). Change this if you deploy
   // the API somewhere other than your own machine.
-  const QRISK_API_URL = "http://localhost:8000/predict";
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const QRISK_API_URL = `${API_BASE}/predict`;
 
   const handleCalculateRisk = async (e) => {
     e.preventDefault();
@@ -602,14 +613,30 @@ export default function App() {
   };
 
   const handleSaveToQueue = () => {
-    if (!calculatedRisk) return;
-    setPatients([calculatedRisk, ...patients]);
+    if (!calculatedRisk || calculatedRisk.saved) return;
+    
+    const prefix = selectedDisease === "breast_cancer" ? "BC" : "DB";
+    const newId = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    const newPatient = {
+      ...calculatedRisk,
+      id: newId,
+      patientName: formData.patientName || "Unknown Patient",
+      name: formData.patientName || "Unknown Patient", // Support both keys
+      diseaseType: selectedDisease,
+      riskScore: calculatedRisk.riskScore,
+      classicalRiskPercent: calculatedRisk.classicalRiskScore,
+      priority: calculatedRisk.priority,
+      createdAt: new Date().toISOString()
+    };
+    
+    setCalculatedRisk({ ...calculatedRisk, saved: true });
+    setPatients([newPatient, ...patients]);
     // Add entry to logs
     setLogs([{
       id: `LOG-${Math.floor(100 + Math.random() * 900)}`,
       user: authData.username || "Dr. Medical User",
-      action: `Created Patient Screening (${calculatedRisk.id})`,
+      action: `Created Patient Screening (${newId})`,
       timestamp: "Just now"
     }, ...logs]);
 
@@ -822,7 +849,7 @@ export default function App() {
         <div className="brand">
           <span className="brand-icon">🌸</span>
           <div>
-            <h2>Q Risk</h2>
+            <h2>QureML</h2>
             <span className="version-tag">{role === "admin" ? "Doctor Console" : "Patient Portal"}</span>
           </div>
         </div>
@@ -1138,16 +1165,29 @@ export default function App() {
                     </div>
 
                     {calculatedRisk.imputed_features && calculatedRisk.imputed_features.length > 0 && (
-                      <div className="auth-error" style={{ backgroundColor: "var(--hiq-card-hover)", color: "var(--text-main)", marginBottom: "1rem", textAlign: "left" }}>
-                        <span style={{ color: "var(--hiq-warning)" }}>ℹ️</span> Note: The following features were left blank and estimated from dataset median: {calculatedRisk.imputed_features.join(', ')}
+                      <div className="auth-error" style={{backgroundColor: "var(--hiq-card-hover)", color: "var(--text-main)", marginBottom: "1.25rem", textAlign: "left", padding: "0.8rem", borderRadius: "8px", lineHeight: "1.4"}}>
+                        <span style={{color: "var(--hiq-warning)"}}>ℹ️</span> <strong>Note:</strong> The following features were left blank and estimated from dataset median: 
+                        <span style={{ color: "var(--hiq-muted)"}}> {calculatedRisk.imputed_features.map(f => featureLabelMap[f] || f).join(', ')}</span>
                       </div>
                     )}
 
                     {calculatedRisk.explanation && calculatedRisk.explanation.length > 0 ? (
                       <div className="factor-list">
-                        {calculatedRisk.explanation.map((f, i) => (
+                        <div style={{ display: "flex", gap: "1.5rem", fontSize: "0.75rem", color: "var(--hiq-muted)", marginBottom: "0.5rem" }}>
+                          <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--hiq-danger)" }}></span> Raises risk</span>
+                          <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--hiq-success)" }}></span> Lowers risk</span>
+                        </div>
+                        {calculatedRisk.explanation
+                          .map(f => ({
+                            ...f,
+                            displayLabel: f.related_features.map(raw => featureLabelMap[raw] || raw).join(" / ")
+                          }))
+                          .filter((f, index, self) => 
+                            self.findIndex(t => t.displayLabel === f.displayLabel) === index
+                          )
+                          .map((f, i) => (
                           <div className="factor-row" key={i}>
-                            <span>{f.related_features.join(" / ")}</span>
+                            <span title={f.displayLabel}>{f.displayLabel}</span>
                             <div className="factor-track">
                               <div
                                 className={`factor-fill ${f.direction === "raises risk" ? "fill-high" : "fill-low"}`}
@@ -1156,8 +1196,7 @@ export default function App() {
                             </div>
                           </div>
                         ))}
-                        <p className="metric-sub">Hybrid model test accuracy: {(calculatedRisk.hybridTestAccuracy * 100).toFixed(1)}%</p>
-                        <p className="metric-sub">Classical baseline accuracy: {(calculatedRisk.classicalTestAccuracy * 100).toFixed(1)}%</p>
+
                       </div>
                     ) : (
                       <div className="factor-list">
@@ -1172,7 +1211,9 @@ export default function App() {
                       </div>
                     )}
 
-                    <button className="save-btn" onClick={handleSaveToQueue}>+ Save to Patient File</button>
+                    <button className="save-btn" onClick={handleSaveToQueue} disabled={calculatedRisk.saved}>
+                      {calculatedRisk.saved ? "✓ Saved" : "+ Save to Patient File"}
+                    </button>
                   </div>
                 ) : (
                   !riskError && (
@@ -1181,35 +1222,6 @@ export default function App() {
                     </div>
                   )
                 )}
-              </div>
-            </div>
-
-            <div className="card-panel pipeline-card">
-              <h2>Hybrid Quantum+ML Pipeline</h2>
-              <p className="sub-text">How your data flows through the hybrid model.</p>
-              <div className="pipeline-strip">
-                {["Patient Data", "PCA (6→4)", "Quantum Feature Map", "XGBoost Classifier", "Hybrid Prediction"].map((step, i, arr) => (
-                  <React.Fragment key={step}>
-                    <div className="pipeline-node">{step}</div>
-                    {i < arr.length - 1 && <span className="pipeline-arrow">→</span>}
-                  </React.Fragment>
-                ))}
-              </div>
-              <div className="grid-2col model-compare">
-                <div className="model-card">
-                  <h3>Classical Baseline (SVM)</h3>
-                  <p className="metric-val">
-                    {calculatedRisk ? `${(calculatedRisk.classicalTestAccuracy * 100).toFixed(1)}%` : modelMetrics ? `${(modelMetrics.classicalAccuracy * 100).toFixed(1)}%` : "—"}
-                  </p>
-                  <span className="metric-sub">Test Accuracy</span>
-                </div>
-                <div className="model-card model-card-active">
-                  <h3>Hybrid Model (Q+XGB)</h3>
-                  <p className="metric-val">
-                    {calculatedRisk ? `${(calculatedRisk.hybridTestAccuracy * 100).toFixed(1)}%` : modelMetrics ? `${(modelMetrics.hybridAccuracy * 100).toFixed(1)}%` : "—"}
-                  </p>
-                  <span className="metric-sub">Test Accuracy</span>
-                </div>
               </div>
             </div>
           </div>

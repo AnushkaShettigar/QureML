@@ -1,0 +1,44 @@
+{
+  "feature_names": [
+    "Worst Concave Points",
+    "Mean Concave Points",
+    "Worst Radius",
+    "Worst Perimeter",
+    "Mean Area",
+    "Mean Texture"
+  ],
+  "component_cols": [
+    "PC1",
+    "PC2",
+    "PC3",
+    "PC4"
+  ],
+  "component_top_features": [
+    [
+      "Worst Perimeter",
+      "Worst Radius"
+    ],
+    [
+      "Mean Texture",
+      "Mean Concave Points"
+    ],
+    [
+      "Worst Concave Points",
+      "Mean Area"
+    ],
+    [
+      "Mean Concave Points",
+      "Worst Concave Points"
+    ]
+  ],
+  "n_qubits": 4,
+  "n_layers": 3,
+  "qfm_seed": 42,
+  "angle_scale": 8.692990255135259,
+  "hybrid_accuracy": 0.9440559440559441,
+  "hybrid_precision": 0.9591836734693877,
+  "hybrid_recall": 0.8867924528301887,
+  "hybrid_f1": 0.9215686274509803,
+  "hybrid_roc_auc": 0.9937106918238994,
+  "classical_accuracy": 0.965034965034965
+}
