@@ -6,20 +6,21 @@ QureML is a hybrid quantum-classical machine learning prototype designed for cli
 
 This project demonstrates how a small quantum circuit can serve as a feature transformer before a classical classifier, while strictly maintaining a classical baseline for transparent, one-to-one benchmarking.
 
-**Disclaimer:** *QureML is a demonstration and screening-support prototype, not an FDA-approved medical diagnostic system. Predictions and risk scores should never be used as a substitute for qualified clinical assessment.*
+> **Disclaimer:** QureML is a demonstration and screening-support prototype, not an FDA-approved medical diagnostic system. Predictions and risk scores should never be used as a substitute for qualified clinical assessment.
 
 ---
 
 ## 📑 Table of Contents
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [System Architecture](#system-architecture)
-- [How the Pipeline Works](#how-the-pipeline-works)
-- [Technology Stack](#technology-stack)
-- [Getting Started](#getting-started)
-- [Project Structure](#project-structure)
-- [Model Evaluation & Limitations](#model-evaluation--limitations)
-- [Future Scope](#future-scope)
+
+* [Overview](https://www.google.com/search?q=%23-overview)
+* [Key Features](https://www.google.com/search?q=%23-key-features)
+* [System Architecture](https://www.google.com/search?q=%23%25EF%25B8%258F-system-architecture)
+* [How the Pipeline Works](https://www.google.com/search?q=%23-how-the-pipeline-works)
+* [Technology Stack](https://www.google.com/search?q=%23-technology-stack)
+* [Getting Started](https://www.google.com/search?q=%23-getting-started)
+* [Project Structure](https://www.google.com/search?q=%23-project-structure)
+* [Model Evaluation & Limitations](https://www.google.com/search?q=%23-model-evaluation--limitations)
+* [Future Scope](https://www.google.com/search?q=%23-future-scope)
 
 ---
 
@@ -27,9 +28,11 @@ This project demonstrates how a small quantum circuit can serve as a feature tra
 
 Clinical datasets often contain highly correlated measurements, making it challenging to extract useful patterns while keeping a model interpretable. QureML explores a hybrid pipeline approach:
 
-`Clinical Input → Preprocessing → PCA → Quantum Feature Map → XGBoost → Risk Score + SHAP Explanation`
+$$\text{Clinical Input} \rightarrow \text{Preprocessing} \rightarrow \text{PCA} \rightarrow \text{Quantum Feature Map} \rightarrow \text{XGBoost} \rightarrow \text{Risk Score + SHAP Explanation}$$
 
 To ensure honest benchmarking, a classical RBF-SVM baseline processes the exact same PCA representation without the quantum transformation. This isolates the effect of the quantum feature map, allowing for direct comparison between the hybrid and classical models.
+
+---
 
 ## ✨ Key Features
 
@@ -37,9 +40,11 @@ To ensure honest benchmarking, a classical RBF-SVM baseline processes the exact 
 * **Hybrid Quantum-Classical ML:** Utilizes a 4-qubit quantum feature map (via PennyLane) with Angle Encoding and RY rotations.
 * **Honest Benchmarking:** Compares the XGBoost hybrid classifier against an RBF-SVM classical baseline.
 * **SHAP Explainability:** Translates quantum-transformed feature impacts back to original clinical inputs for human-readable transparency.
-* **Dual-View Dashboard:** 
-  * *Clinician View:* Patient screening form, risk scores, model agreement indicators, and visual SHAP explanations.
-  * *Admin View:* Patient queues, threshold configurations, and audit-style activity logs.
+* **Dual-View Dashboard:**
+* **Clinician View:** Patient screening form, risk scores, model agreement indicators, and visual SHAP explanations.
+* **Admin View:** Patient queues, threshold configurations, and audit-style activity logs.
+
+
 * **Accessible Execution:** Runs entirely on a local quantum simulator (`default.qubit`), requiring no dedicated quantum hardware to test.
 
 ---
@@ -98,12 +103,13 @@ To ensure honest benchmarking, a classical RBF-SVM baseline processes the exact 
                     │ Risk + Explanation    │
                     └───────────────────────┘
 
+```
 
 ---
 
 ## 🧠 How the Pipeline Works
 
-1. **Clinical Input:** Accepts six selected features from the WDBC dataset (Worst Concave Points, Mean Concave Points, Worst Radius, Worst Perimeter, Mean Area, Mean Texture).
+1. **Clinical Input:** Accepts six selected features from the WDBC dataset (*Worst Concave Points, Mean Concave Points, Worst Radius, Worst Perimeter, Mean Area, Mean Texture*).
 2. **Classical Preprocessing:** Inputs are standardized using `StandardScaler` and reduced to 4 principal components via PCA to map naturally to our 4-qubit circuit.
 3. **Quantum Feature Transformation:** The PCA components are converted into rotation angles and encoded using `AngleEmbedding` with RY rotations. The circuit uses 4 qubits, 3 strongly entangling layers, fixed weights (Seed 42), and Pauli-Z expectation values.
 4. **Hybrid Classification:** The quantum-transformed features are passed to an XGBoost classifier, generating a probability converted into a clinical risk score.
@@ -114,24 +120,24 @@ To ensure honest benchmarking, a classical RBF-SVM baseline processes the exact 
 
 ## 🧰 Technology Stack
 
-**Frontend**
+### Frontend
 
 * React 18 & Vite
 * JavaScript, HTML/CSS
 
-**Backend & ML API**
+### Backend & ML API
 
 * Python 3
 * FastAPI & Uvicorn
 * Pydantic
 
-**Machine Learning & Data**
+### Machine Learning & Data
 
 * Scikit-learn, XGBoost
 * NumPy, Pandas
-* SHAP (KernelExplainer)
+* SHAP (`KernelExplainer`)
 
-**Quantum Computing**
+### Quantum Computing
 
 * PennyLane (using `default.qubit` simulator)
 
@@ -142,7 +148,7 @@ To ensure honest benchmarking, a classical RBF-SVM baseline processes the exact 
 ### 1. Clone the repository
 
 ```bash
-git clone [https://github.com/AnushkaShettigar/QureML.git](https://github.com/AnushkaShettigar/QureML.git)
+git clone https://github.com/AnushkaShettigar/QureML.git
 cd QureML
 
 ```
@@ -156,12 +162,17 @@ npm install
 
 ### 3. Setup Python Backend Environment
 
-It is recommended to use a virtual environment.
+It is recommended to use a virtual environment:
 
 ```bash
-# Create and activate virtual environment
+# Create virtual environment
 python -m venv .venv
-source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+
+# Activate virtual environment
+# On Linux/macOS:
+source .venv/bin/activate
+# On Windows:
+# .venv\Scripts\activate
 
 # Install dependencies
 pip install numpy pandas scikit-learn xgboost pennylane shap fastapi uvicorn joblib
@@ -170,7 +181,7 @@ pip install numpy pandas scikit-learn xgboost pennylane shap fastapi uvicorn job
 
 ### 4. Train the ML Pipeline
 
-Generate the model artifacts required by the API.
+Generate the model artifacts required by the API:
 
 ```bash
 cd ml
@@ -187,18 +198,18 @@ uvicorn api:app --reload --port 8000
 
 ```
 
-*The API will be available locally at `http://localhost:8000*`
+The API will be available locally at `http://localhost:8000`.
 
 ### 6. Start the Frontend
 
-Open a new terminal session in the project root:
+Open a new terminal session in the project root directory:
 
 ```bash
 npm run dev
 
 ```
 
-*Vite will output the local development URL for the React application.*
+Vite will output the local development URL for the React application.
 
 ---
 
@@ -225,7 +236,7 @@ QureML/
 
 ## 🔬 Model Evaluation & Limitations
 
-The training pipeline performs an explicit comparison between the **Hybrid Model** (PCA → Quantum → XGBoost) and the **Classical Model** (PCA → RBF-SVM) using standard metrics (Accuracy, Precision, Recall, F1 Score, ROC-AUC).
+The training pipeline performs an explicit comparison between the **Hybrid Model** (*PCA → Quantum → XGBoost*) and the **Classical Model** (*PCA → RBF-SVM*) using standard metrics (Accuracy, Precision, Recall, F1 Score, ROC-AUC).
 
 This project treats quantum computing as an experimental representation-learning component, objectively benchmarking it against classical methods rather than assuming quantum superiority by default.
 
@@ -244,7 +255,3 @@ This project treats quantum computing as an experimental representation-learning
 * Integration of larger, more diverse clinical datasets with robust cross-validation.
 * Calibration of predicted probabilities for strict clinical standards.
 * Transition to robust, secure server-side authentication (replacing current demo-level auth).
-
-```
-
-```
