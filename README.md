@@ -1,150 +1,147 @@
 ```markdown
-# 🌸 QureML
+# QureML: Hybrid Quantum–Classical Clinical Risk Screening
 
-> **Hybrid Quantum–Classical Clinical Risk Screening**  
-> *A production-minded, explainable AI prototype exploring quantum feature representations for clinical risk assessment.*
+> **Quantum-enhanced representations. Classical intelligence. Human-readable explanations.**
 
----
+QureML is a hybrid quantum-classical machine learning prototype designed for clinical risk screening. It integrates classical data preprocessing, a fixed quantum feature map, classical machine learning classification, and SHAP-based explainability into a complete, clinician-facing web application.
 
-## Overview
+This project demonstrates how a small quantum circuit can serve as a feature transformer before a classical classifier, while strictly maintaining a classical baseline for transparent, one-to-one benchmarking.
 
-**QureML** is a hybrid quantum-classical machine learning screening prototype built to evaluate quantum feature transformations on structured medical data. By pairing a 4-qubit parameterized quantum circuit with classical gradient boosted trees (XGBoost) and SHAP feature attribution, QureML offers an end-to-end clinical workflow complete with transparent benchmarking against a pure classical baseline (RBF-SVM).
-
-The application demonstrates how quantum transformations act as non-linear representation learners prior to classical classification, delivering predictions, feature importance, and model comparisons through an executive React dashboard backed by a FastAPI backend.
-
-> ⚠️ **Clinical Notice**: QureML is a research and clinical screening demonstration tool. It is not a certified medical device and must not be used for primary diagnostic decision-making.
+**Disclaimer:** *QureML is a demonstration and screening-support prototype, not an FDA-approved medical diagnostic system. Predictions and risk scores should never be used as a substitute for qualified clinical assessment.*
 
 ---
 
-## Key Highlights
-
-- **Hybrid Quantum Architecture**: Integrates PennyLane's 4-qubit quantum feature map (`RY` AngleEmbedding, strongly entangling layers) with an XGBoost classifier.
-- **Isolated Classical Benchmarking**: Direct performance comparison against an RBF-SVM baseline trained on identical principal component representations.
-- **Explainable Predictions**: Explains complex quantum representations using SHAP (KernelExplainer) mapped back to original clinical features.
-- **Role-Based Web Dashboards**: Dual-perspective interfaces for Clinician Screening and System Administration (patient queues, audit logs, and threshold tuning).
-- **Deterministic & Local**: Fully simulated via PennyLane's `default.qubit` state-vector simulator with fixed circuit weight seeds for zero-hardware reproducibility.
+## 📑 Table of Contents
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [System Architecture](#system-architecture)
+- [How the Pipeline Works](#how-the-pipeline-works)
+- [Technology Stack](#technology-stack)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
+- [Model Evaluation & Limitations](#model-evaluation--limitations)
+- [Future Scope](#future-scope)
 
 ---
 
-## Technical Architecture
+## 🔍 Overview
+
+Clinical datasets often contain highly correlated measurements, making it challenging to extract useful patterns while keeping a model interpretable. QureML explores a hybrid pipeline approach:
+
+`Clinical Input → Preprocessing → PCA → Quantum Feature Map → XGBoost → Risk Score + SHAP Explanation`
+
+To ensure honest benchmarking, a classical RBF-SVM baseline processes the exact same PCA representation without the quantum transformation. This isolates the effect of the quantum feature map, allowing for direct comparison between the hybrid and classical models.
+
+## ✨ Key Features
+
+* **Clinical Risk Screening:** Evaluates patient risk using selected features from the Wisconsin Diagnostic Breast Cancer (WDBC) dataset.
+* **Hybrid Quantum-Classical ML:** Utilizes a 4-qubit quantum feature map (via PennyLane) with Angle Encoding and RY rotations.
+* **Honest Benchmarking:** Compares the XGBoost hybrid classifier against an RBF-SVM classical baseline.
+* **SHAP Explainability:** Translates quantum-transformed feature impacts back to original clinical inputs for human-readable transparency.
+* **Dual-View Dashboard:** 
+  * *Clinician View:* Patient screening form, risk scores, model agreement indicators, and visual SHAP explanations.
+  * *Admin View:* Patient queues, threshold configurations, and audit-style activity logs.
+* **Accessible Execution:** Runs entirely on a local quantum simulator (`default.qubit`), requiring no dedicated quantum hardware to test.
+
+---
+
+## 🏗️ System Architecture
 
 ```text
-                               ┌─────────────────────────┐
-                               │   Clinical Input (WDBC) │
-                               │   6 Selected Features   │
-                               └────────────┬────────────┘
-                                            │
-                                            ▼
-                               ┌─────────────────────────┐
-                               │     StandardScaler      │
-                               └────────────┬────────────┘
-                                            │
-                                            ▼
-                               ┌─────────────────────────┐
-                               │      PCA Reduction      │
-                               │    (6 → 4 Components)   │
-                               └────────────┬────────────┘
-                                            │
-                       ┌────────────────────┴────────────────────┐
-                       ▼                                         ▼
-         ┌───────────────────────────┐             ┌───────────────────────────┐
-         │    Quantum Feature Map    │             │    Classical Baseline     │
-         │ (4 Qubits / PennyLane RY) │             │         (RBF-SVM)         │
-         └─────────────┬─────────────┘             └─────────────┬─────────────┘
-                       │                                         │
-                       ▼                                         │
-         ┌───────────────────────────┐                           │
-         │    XGBoost Classifier     │                           │
-         └─────────────┬─────────────┘                           │
-                       │                                         │
-                       └────────────────────┬────────────────────┘
-                                            ▼
-                               ┌─────────────────────────┐
-                               │ Benchmark & ROC Metrics │
-                               └────────────┬────────────┘
-                                            │
-                                            ▼
-                               ┌─────────────────────────┐
-                               │   SHAP Explainability   │
-                               └────────────┬────────────┘
-                                            │
-                                            ▼
-                               ┌─────────────────────────┐
-                               │   React + Vite / REST   │
-                               └─────────────────────────┘
+                    ┌───────────────────────┐
+                    │   Clinical Input      │
+                    │   6 WDBC Features     │
+                    └───────────┬───────────┘
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │ StandardScaler        │
+                    │ Normalization         │
+                    └───────────┬───────────┘
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │ PCA                   │
+                    │ 6 → 4 Components      │
+                    └───────────┬───────────┘
+                                │
+                    ┌───────────┴───────────┐
+                    │                       │
+                    ▼                       ▼
+        ┌─────────────────────┐   ┌─────────────────────┐
+        │ Quantum Feature Map │   │ Classical Baseline  │
+        │ 4 Qubits            │   │ RBF-SVM             │
+        │ PennyLane Simulator │   │ No Quantum Step     │
+        └──────────┬──────────┘   └──────────┬──────────┘
+                   │                         │
+                   ▼                         │
+        ┌─────────────────────┐              │
+        │ XGBoost             │              │
+        │ Hybrid Classifier   │              │
+        └──────────┬──────────┘              │
+                   │                         │
+                   └────────────┬────────────┘
+                                ▼
+                    ┌───────────────────────┐
+                    │ Comparison + Metrics  │
+                    │ Hybrid vs Classical   │
+                    └───────────┬───────────┘
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │ SHAP Explainability   │
+                    │ Top Feature Drivers   │
+                    └───────────┬───────────┘
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │ React / Vite UI       │
+                    │ Risk + Explanation    │
+                    └───────────────────────┘
 
 ```
 
 ---
 
-## System Pipeline & Mathematical Framing
+## 🧠 How the Pipeline Works
 
-1. **Dimensionality Alignment**: Accepts 6 core features from the Wisconsin Diagnostic Breast Cancer (WDBC) dataset: *Worst Concave Points, Mean Concave Points, Worst Radius, Worst Perimeter, Mean Area,* and *Mean Texture*. Inputs are standardized ($\mu=0, \sigma=1$) and projected via PCA from $\mathbb{R}^6 \to \mathbb{R}^4$.
-2. **Quantum Feature Transformation**:
-* Component values map to rotation angles $\theta \in \mathbb{R}^4$ using `qml.AngleEmbedding` with $RY$ gates.
-* Entanglement is applied via 3 `StronglyEntanglingLayers`.
-* Feature outputs are generated by measuring Pauli-$Z$ expectation values $\langle Z_i \rangle$ across each qubit:
-
-$$\mathbf{x}_{\text{quantum}} = \left[ \langle Z_0 \rangle, \langle Z_1 \rangle, \langle Z_2 \rangle, \langle Z_3 \rangle \right]$$
-
-
-
-
-3. **Classification & Benchmarking**:
-* **Hybrid Path**: $\mathbf{x}_{\text{quantum}} \to \text{XGBoost} \to P(\text{Malignant})$
-* **Classical Path**: $\mathbf{x}_{\text{PCA}} \to \text{RBF-SVM} \to P(\text{Malignant})$
-
-
-4. **SHAP Attribution**: Computes Shapley additive explanations over the quantum embedding space, projecting attribution weight back onto original clinical inputs for human readability.
+1. **Clinical Input:** Accepts six selected features from the WDBC dataset (Worst Concave Points, Mean Concave Points, Worst Radius, Worst Perimeter, Mean Area, Mean Texture).
+2. **Classical Preprocessing:** Inputs are standardized using `StandardScaler` and reduced to 4 principal components via PCA to map naturally to our 4-qubit circuit.
+3. **Quantum Feature Transformation:** The PCA components are converted into rotation angles and encoded using `AngleEmbedding` with RY rotations. The circuit uses 4 qubits, 3 strongly entangling layers, fixed weights (Seed 42), and Pauli-Z expectation values.
+4. **Hybrid Classification:** The quantum-transformed features are passed to an XGBoost classifier, generating a probability converted into a clinical risk score.
+5. **Classical Baseline:** The same PCA representation bypasses the quantum circuit and is fed into an RBF-SVM to establish a classical performance baseline.
+6. **Explainability:** SHAP's `KernelExplainer` identifies which quantum-transformed components drove the prediction, tracing them back to the original clinical features for the frontend dashboard.
 
 ---
 
-## Stack & Artifacts
+## 🧰 Technology Stack
 
-| Domain | Technologies |
-| --- | --- |
-| **Frontend** | React 18, Vite, JavaScript, Responsive UI (Light/Dark support) |
-| **Backend** | Python 3.10+, FastAPI, Uvicorn, Pydantic |
-| **ML & Quantum** | PennyLane, Scikit-learn, XGBoost, SHAP, NumPy, Pandas |
-| **Storage / Artifacts** | Joblib (`.joblib`), Pickle (`.pkl`), NumPy matrices (`.npy`), JSON |
+**Frontend**
 
----
+* React 18 & Vite
+* JavaScript, HTML/CSS
 
-## Project Structure
+**Backend & ML API**
 
-```text
-QureML/
-├── ml/
-│   ├── api.py                   # FastAPI application & REST endpoints
-│   ├── train_and_save.py        # Model training, PCA fitting, & artifact exporter
-│   ├── quantum_risk_model.py    # PennyLane 4-qubit circuit implementation
-│   ├── pca_analysis.py          # Dimensionality reduction pipeline
-│   └── artifacts/               # Serialized models, scalers, and metrics
-│       ├── scaler.pkl
-│       ├── pca.pkl
-│       ├── hybrid_model.joblib
-│       ├── classical_baseline.joblib
-│       ├── background.npy
-│       ├── meta.json
-│       └── metrics.json
-├── src/                         # React UI components & views
-├── public/                      # Static assets
-├── ARCHITECTURE.md              # Detailed architecture documentation
-├── package.json
-└── README.md
+* Python 3
+* FastAPI & Uvicorn
+* Pydantic
 
-```
+**Machine Learning & Data**
+
+* Scikit-learn, XGBoost
+* NumPy, Pandas
+* SHAP (KernelExplainer)
+
+**Quantum Computing**
+
+* PennyLane (using `default.qubit` simulator)
 
 ---
 
-## Local Development & Deployment Guide
+## 🚀 Getting Started
 
-### Prerequisites
-
-* **Node.js** v18+ and **npm**
-* **Python** 3.10+ and **pip**
-
-### Step 1: Clone Repository
+### 1. Clone the repository
 
 ```bash
 git clone [https://github.com/AnushkaShettigar/QureML.git](https://github.com/AnushkaShettigar/QureML.git)
@@ -152,67 +149,103 @@ cd QureML
 
 ```
 
-### Step 2: Set Up Python Backend & Train Artifacts
+### 2. Install Frontend Dependencies
+
+```bash
+npm install
+
+```
+
+### 3. Setup Python Backend Environment
+
+It is recommended to use a virtual environment.
 
 ```bash
 # Create and activate virtual environment
 python -m venv .venv
-# On Windows: .venv\Scripts\activate
-# On Linux/macOS: source .venv/bin/activate
+source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
 
-# Install requirements
+# Install dependencies
 pip install numpy pandas scikit-learn xgboost pennylane shap fastapi uvicorn joblib
 
-# Execute model training & save artifact state
+```
+
+### 4. Train the ML Pipeline
+
+Generate the model artifacts required by the API.
+
+```bash
 cd ml
 python train_and_save.py
 
 ```
 
-### Step 3: Run FastAPI Backend
+### 5. Start the Backend API
+
+From the `ml` directory, start the FastAPI server:
 
 ```bash
-# From the /ml directory
-uvicorn api:app --reload --host 0.0.0.0 --port 8000
+uvicorn api:app --reload --port 8000
 
 ```
 
-*API docs will be available at `http://localhost:8000/docs`.*
+*The API will be available locally at `http://localhost:8000*`
 
-### Step 4: Launch Frontend
+### 6. Start the Frontend
+
+Open a new terminal session in the project root:
 
 ```bash
-# In a new terminal window at project root
-npm install
 npm run dev
 
 ```
 
-*Access the clinical dashboard interface at `http://localhost:5173`.*
+*Vite will output the local development URL for the React application.*
 
 ---
 
-## API Reference
+## 📁 Project Structure
 
-| Endpoint | Method | Description |
-| --- | --- | --- |
-| `/health` | `GET` | Health check and pipeline status verification. |
-| `/features` | `GET` | Returns list of required WDBC clinical input features. |
-| `/sample-patients` | `GET` | Fetches pre-configured test cases for immediate demo screening. |
-| `/predict` | `POST` | Accepts 6 feature payload; returns hybrid risk score, baseline score, and SHAP attribution. |
+```text
+QureML/
+├── ml/
+│   ├── api.py                  # FastAPI backend
+│   ├── train_and_save.py       # Model training pipeline
+│   ├── quantum_risk_model.py   # PennyLane quantum circuit definitions
+│   ├── pca_analysis.py
+│   └── artifacts/              # Generated models and scalers
+├── src/
+│   └── App.jsx                 # Main React frontend
+├── public/
+├── ARCHITECTURE.md
+├── package.json
+└── README.md
+
+```
 
 ---
 
-## Model Evaluation Summary
+## 🔬 Model Evaluation & Limitations
 
-The pipeline isolates the quantum stage by evaluating both models on an identical stratified test partition:
+The training pipeline performs an explicit comparison between the **Hybrid Model** (PCA → Quantum → XGBoost) and the **Classical Model** (PCA → RBF-SVM) using standard metrics (Accuracy, Precision, Recall, F1 Score, ROC-AUC).
 
-| Model | Pipeline Architecture | Tracked Metrics |
-| --- | --- | --- |
-| **Hybrid** | $\text{Input} \to \text{Scaler} \to \text{PCA} \to \text{Quantum Map} \to \text{XGBoost}$ | Accuracy, Precision, Recall, F1, ROC-AUC |
-| **Classical** | $\text{Input} \to \text{Scaler} \to \text{PCA} \to \text{RBF-SVM}$ | Accuracy, Precision, Recall, F1, ROC-AUC |
+This project treats quantum computing as an experimental representation-learning component, objectively benchmarking it against classical methods rather than assuming quantum superiority by default.
 
-*Metrics are auto-compiled to `ml/artifacts/metrics.json` upon running `train_and_save.py`.*
+### Known Limitations
+
+* **Simulated Environment:** Runs on PennyLane's `default.qubit` rather than physical quantum hardware.
+* **Fixed Quantum State:** Uses fixed quantum weights as a feature transformation rather than training a fully variational quantum classifier, prioritizing stability and manageable scope.
+* **Dataset Scope:** Tested on a small, public benchmark dataset (WDBC). Proper clinical application requires substantially larger, multi-modal datasets.
+
+---
+
+## 🌱 Future Scope
+
+* Deployment and execution on actual quantum hardware.
+* Exploration of alternative quantum feature maps and embeddings.
+* Integration of larger, more diverse clinical datasets with robust cross-validation.
+* Calibration of predicted probabilities for strict clinical standards.
+* Transition to robust, secure server-side authentication (replacing current demo-level auth).
 
 ```
 
