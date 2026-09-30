@@ -38,11 +38,15 @@ from pydantic import BaseModel
 from diseases import DISEASES
 from quantum_risk_model import QuantumFeatureMap
 
+import os
+
 app = FastAPI(title="QRISK Prediction API")
+
+allowed_origin = os.getenv("ALLOWED_ORIGIN", "*")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[allowed_origin] if allowed_origin != "*" else ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -131,7 +135,7 @@ def hybrid_predict_fn(X_batch: np.ndarray, model) -> np.ndarray:
 def get_diseases():
     return DISEASES
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     if not MODEL_READY:
         return {"status": "not_ready", "error": MODEL_LOAD_ERROR}
