@@ -50,7 +50,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+# CNN image screening (optional: stays off if image artifacts or torch are missing)
+try:
+    from image.routes import router as image_router
+    app.include_router(image_router, prefix="/image")
+    print("Image screening routes enabled")
+except Exception as e:
+    print(f"Image screening routes disabled: {e}")
 
 class PredictionRequest(BaseModel):
     disease_type: str

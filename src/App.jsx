@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import QuantumBackground from "./QuantumBackground.jsx";
+import ImageScreening from "./ImageScreening";
 
 // Feature Display Labels
 const featureLabelMap = {
@@ -891,6 +892,9 @@ export default function App() {
             </>
           )}
 
+          <button className={`nav-item ${activeTab === "imagescreen" ? "active" : ""}`} onClick={() => setActiveTab("imagescreen")}>
+            <span>🩻</span> Image Screening
+          </button>
           <button className={`nav-item ${activeTab === "settings" ? "active" : ""}`} onClick={() => setActiveTab("settings")}>
             <span>⚙️</span> Profile &amp; Settings
           </button>
@@ -1647,6 +1651,12 @@ export default function App() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === "imagescreen" && (
+          <div className="tab-container">
+            <ImageScreening />
           </div>
         )}
 

@@ -1,0 +1,13 @@
+{
+  "n_qubits": 4,
+  "n_layers": 3,
+  "qfm_seed": 42,
+  "angle_scale": 36.852294921875,
+  "classes": [
+    "NORMAL",
+    "PNEUMONIA"
+  ],
+  "feature_extractor": "mobilenet_v2_imagenet_1280",
+  "n_train": 1950,
+  "n_test": 650
+}
