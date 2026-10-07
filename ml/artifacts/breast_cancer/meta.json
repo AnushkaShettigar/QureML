@@ -34,7 +34,7 @@
   "n_qubits": 4,
   "n_layers": 3,
   "qfm_seed": 42,
-  "angle_scale": 8.692990255135259,
+  "angle_scale": 8.692990255135257,
   "hybrid_accuracy": 0.9440559440559441,
   "hybrid_precision": 0.9591836734693877,
   "hybrid_recall": 0.8867924528301887,

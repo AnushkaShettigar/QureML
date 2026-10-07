@@ -1,0 +1,112 @@
+[
+  {
+    "id": "Patient-0",
+    "name": "Sample Diabetic 1",
+    "label": "Diabetic",
+    "glucose": 148.0,
+    "bmi": 33.6,
+    "age": 50.0,
+    "diabetes_pedigree": 0.627,
+    "blood_pressure": 72.0,
+    "insulin": null
+  },
+  {
+    "id": "Patient-2",
+    "name": "Sample Diabetic 2",
+    "label": "Diabetic",
+    "glucose": 183.0,
+    "bmi": 23.3,
+    "age": 32.0,
+    "diabetes_pedigree": 0.672,
+    "blood_pressure": 64.0,
+    "insulin": null
+  },
+  {
+    "id": "Patient-4",
+    "name": "Sample Diabetic 3",
+    "label": "Diabetic",
+    "glucose": 137.0,
+    "bmi": 43.1,
+    "age": 33.0,
+    "diabetes_pedigree": 2.288,
+    "blood_pressure": 40.0,
+    "insulin": 168.0
+  },
+  {
+    "id": "Patient-6",
+    "name": "Sample Diabetic 4",
+    "label": "Diabetic",
+    "glucose": 78.0,
+    "bmi": 31.0,
+    "age": 26.0,
+    "diabetes_pedigree": 0.248,
+    "blood_pressure": 50.0,
+    "insulin": 88.0
+  },
+  {
+    "id": "Patient-8",
+    "name": "Sample Diabetic 5",
+    "label": "Diabetic",
+    "glucose": 197.0,
+    "bmi": 30.5,
+    "age": 53.0,
+    "diabetes_pedigree": 0.158,
+    "blood_pressure": 70.0,
+    "insulin": 543.0
+  },
+  {
+    "id": "Patient-1",
+    "name": "Sample Non-Diabetic 6",
+    "label": "Non-Diabetic",
+    "glucose": 85.0,
+    "bmi": 26.6,
+    "age": 31.0,
+    "diabetes_pedigree": 0.351,
+    "blood_pressure": 66.0,
+    "insulin": null
+  },
+  {
+    "id": "Patient-3",
+    "name": "Sample Non-Diabetic 7",
+    "label": "Non-Diabetic",
+    "glucose": 89.0,
+    "bmi": 28.1,
+    "age": 21.0,
+    "diabetes_pedigree": 0.167,
+    "blood_pressure": 66.0,
+    "insulin": 94.0
+  },
+  {
+    "id": "Patient-5",
+    "name": "Sample Non-Diabetic 8",
+    "label": "Non-Diabetic",
+    "glucose": 116.0,
+    "bmi": 25.6,
+    "age": 30.0,
+    "diabetes_pedigree": 0.201,
+    "blood_pressure": 74.0,
+    "insulin": null
+  },
+  {
+    "id": "Patient-7",
+    "name": "Sample Non-Diabetic 9",
+    "label": "Non-Diabetic",
+    "glucose": 115.0,
+    "bmi": 35.3,
+    "age": 29.0,
+    "diabetes_pedigree": 0.134,
+    "blood_pressure": null,
+    "insulin": null
+  },
+  {
+    "id": "Patient-10",
+    "name": "Sample Non-Diabetic 10",
+    "label": "Non-Diabetic",
+    "glucose": 110.0,
+    "bmi": 37.6,
+    "age": 30.0,
+    "diabetes_pedigree": 0.191,
+    "blood_pressure": 92.0,
+    "insulin": null
+  }
+]

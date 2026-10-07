@@ -35,11 +35,10 @@
   "n_layers": 3,
   "qfm_seed": 42,
   "angle_scale": 6.368213856802424,
-  "hybrid_input": "pca+quantum",
-  "hybrid_accuracy": 0.7487179487179487,
-  "hybrid_precision": 0.6338028169014085,
-  "hybrid_recall": 0.6617647058823529,
-  "hybrid_f1": 0.6474820143884892,
-  "hybrid_roc_auc": 0.8109078276980084,
-  "classical_accuracy": 0.7282051282051282
+  "hybrid_accuracy": 0.7230769230769231,
+  "hybrid_precision": 0.5875,
+  "hybrid_recall": 0.6911764705882353,
+  "hybrid_f1": 0.6351351351351351,
+  "hybrid_roc_auc": 0.782422417786012,
+  "classical_accuracy": 0.7230769230769231
 }

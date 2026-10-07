@@ -88,6 +88,16 @@ def _load_diabetes() -> tuple[pd.DataFrame, np.ndarray]:
     y = df["outcome"].values
     return X, y
 
+N_PER_CLASS = 100   # 100 diabetic + 100 non-diabetic = 200 rows (use 50 for 100 rows)
+
+def _load_diabetes():
+    df = pd.read_csv(Path(__file__).parent.parent / "diabetes_prediction_dataset.csv")
+    df = df.drop_duplicates()
+    df = df.groupby("diabetes", group_keys=False).sample(n=N_PER_CLASS, random_state=42)
+    selected = ["age", "bmi", "HbA1c_level", "blood_glucose_level",
+                "hypertension", "heart_disease"]
+    return df[selected].copy(), df["diabetes"].values
+
 
 def load_dataset(disease_key: str = "breast_cancer") -> tuple[pd.DataFrame, np.ndarray]:
     if disease_key == "diabetes":

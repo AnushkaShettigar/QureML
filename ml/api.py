@@ -222,7 +222,12 @@ def predict(req: PredictionRequest):
     # --- Hybrid prediction: quantum transform → XGBoost ---
     angles_2d = angles.reshape(1, -1)
     q_features = qfm.transform(angles_2d)
-    hybrid_proba = float(hybrid_model.predict_proba(q_features)[0, 1])
+    # v2 hybrid reads PCA angles + quantum outputs; the old one read quantum outputs only
+    if meta.get("hybrid_input") == "pca+quantum":
+        h_input = np.hstack([angles_2d, q_features])
+    else:
+        h_input = q_features
+    hybrid_proba = float(hybrid_model.predict_proba(h_input)[0, 1])
     hybrid_risk_score = int(np.clip(round(hybrid_proba * 100), 1, 99))
     
     # Diabetes specific logic for labelling: if proba > 0.5 then Diabetic, else Non-Diabetic
@@ -247,7 +252,11 @@ def predict(req: PredictionRequest):
         return hybrid_predict_fn(X_batch, hybrid_model)
 
     explainer = shap.KernelExplainer(bound_predict_fn, background)
-    shap_values = explainer.shap_values(q_features, nsamples=60)[0]
+    shap_values = explainer.shap_values(h_input, nsamples=60)[0]
+    n_comp = len(meta["component_cols"])
+    if len(shap_values) == 2 * n_comp:
+        # fold each PCA angle's SHAP value together with its quantum output's
+        shap_values = shap_values[:n_comp] + shap_values[n_comp:]
 
     explanation = []
     for comp_name, impact, top_feats in zip(

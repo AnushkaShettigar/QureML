@@ -1,0 +1,28 @@
+{
+  "sources": {
+    "diabetes.csv": {
+      "rows": 768,
+      "exact_duplicates_inside_file": 0
+    },
+    "diabetes_2000.csv": {
+      "rows": 2000,
+      "exact_duplicates_inside_file": 1256
+    }
+  },
+  "rows_after_concat": 2768,
+  "rows_after_validity_filter": 2768,
+  "rows_dropped_conflicting_label": 0,
+  "rows_dropped_duplicate": 1990,
+  "final_rows": 778,
+  "class_balance": {
+    "0": 506,
+    "1": 272
+  },
+  "rows_contributed_by_file": {
+    "diabetes.csv": 768,
+    "diabetes_2000.csv": 10
+  },
+  "train_rows": 583,
+  "test_rows": 195,
+  "train_test_overlap": 0
+}
