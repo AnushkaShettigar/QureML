@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: qureml_postgres
+    environment:
+      POSTGRES_DB: quremldb
+      POSTGRES_USER: qureml
+      POSTGRES_PASSWORD: qureml_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - qureml_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qureml -d quremldb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    container_name: qureml_api
+    environment:
+      DATABASE_URL: postgresql://qureml:qureml_secret@db:5432/quremldb
+      ALLOWED_ORIGIN: "http://localhost:5173"
+      SECRET_KEY: "qureml-dev-secret-key-change-in-prod-32chars"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./ml:/app
+    command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  qureml_pgdata:

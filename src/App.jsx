@@ -251,12 +251,36 @@ export default function App() {
   const [authData, setAuthData] = useState({ username: "", email: "", password: "", confirmPassword: "" });
   const [currentAccountId, setCurrentAccountId] = useState(null);
 
-  // Persisted Account Store (replaces the old OTP demo login)
   const [accounts, setAccounts] = useState(() => {
     const saved = localStorage.getItem(ACCOUNTS_KEY);
     if (saved) return JSON.parse(saved);
     return seedDefaultAccounts();
   });
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = sessionStorage.getItem("qrisk_token");
+      if (!token) return;
+      const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setRole(data.role);
+          setCurrentAccountId(data.account_id);
+          setAuthData(prev => ({ ...prev, username: data.username }));
+          setIsAuthenticated(true);
+        } else {
+          sessionStorage.removeItem("qrisk_token");
+        }
+      } catch (e) {
+        console.error("Session restoration failed:", e);
+      }
+    };
+    restoreSession();
+  }, []);
 
   const [seedCredentials] = useState(() => {
     const saved = localStorage.getItem("qrisk_seed_credentials_v1");
@@ -423,14 +447,20 @@ export default function App() {
     setActiveTab("dashboard");
   };
 
-  const handleAuthSubmit = (e) => {
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
     if (!authData.username || !authData.password) {
       alert("Please enter both username and password.");
       return;
     }
 
+    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
     if (authMode === "register") {
+      if (role === "admin") {
+        alert("Admin registration is not allowed.");
+        return;
+      }
       if (!authData.email) {
         alert("Email address is required.");
         return;
@@ -439,47 +469,88 @@ export default function App() {
         alert("Passwords do not match. Please re-enter.");
         return;
       }
-      const usernameTaken = accounts.some(
-        (a) => a.role === role && a.username.toLowerCase() === authData.username.toLowerCase()
-      );
-      if (usernameTaken) {
-        alert("That username is already registered for this portal. Please sign in instead.");
-        return;
-      }
+      try {
+        const response = await fetch(`${API_BASE}/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: authData.username,
+            email: authData.email,
+            password: authData.password,
+            role: "user"
+          })
+        });
 
-      const newAccount = {
-        accountId: generateAccountId(role),
-        username: authData.username,
-        email: authData.email,
-        passwordHash: hashPassword(authData.password),
-        role
-      };
-      setAccounts((prev) => [...prev, newAccount]);
-      setCurrentAccountId(newAccount.accountId);
-      setIsAuthenticated(true);
-      alert(`Account created! Your Account ID is ${newAccount.accountId} — keep it safe, you can use it (or your username) to sign in later.`);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          alert(errorData.detail || "Registration failed.");
+          return;
+        }
+
+        const data = await response.json();
+        const token = data.access_token;
+        sessionStorage.setItem("qrisk_token", token);
+        
+        const meResponse = await fetch(`${API_BASE}/auth/me`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if (meResponse.ok) {
+          const meData = await meResponse.json();
+          setCurrentAccountId(meData.account_id);
+          setAuthData(prev => ({ ...prev, username: meData.username }));
+          setIsAuthenticated(true);
+          alert(`Account created successfully! Your Account ID is ${meData.account_id} — keep it safe, you can use it (or your username) to sign in later.`);
+        } else {
+          alert("Registration successful, but failed to retrieve user profile. Please log in.");
+          setAuthMode("login");
+        }
+      } catch (err) {
+        alert("Network error: Could not reach the server.");
+      }
       return;
     }
 
-    // Login
-    const match = accounts.find(
-      (a) =>
-        a.role === role &&
-        (a.username.toLowerCase() === authData.username.toLowerCase() ||
-          a.accountId.toLowerCase() === authData.username.toLowerCase()) &&
-        a.passwordHash === hashPassword(authData.password)
-    );
+    try {
+      const response = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: authData.username,
+          password: authData.password,
+          role: role
+        })
+      });
 
-    if (match) {
-      setCurrentAccountId(match.accountId);
-      setAuthData((prev) => ({ ...prev, username: match.username }));
-      setIsAuthenticated(true);
-    } else {
-      alert("Invalid username/ID or password.");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        alert(errorData.detail || "Invalid username/ID or password.");
+        return;
+      }
+
+      const data = await response.json();
+      const token = data.access_token;
+      sessionStorage.setItem("qrisk_token", token);
+      
+      const meResponse = await fetch(`${API_BASE}/auth/me`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      
+      if (meResponse.ok) {
+        const meData = await meResponse.json();
+        setCurrentAccountId(meData.account_id);
+        setAuthData(prev => ({ ...prev, username: meData.username }));
+        setIsAuthenticated(true);
+      } else {
+        alert("Failed to retrieve user profile.");
+      }
+    } catch (err) {
+      alert("Network error: Could not reach the server.");
     }
   };
 
   const handleLogout = () => {
+    sessionStorage.removeItem("qrisk_token");
     setIsAuthenticated(false);
     setRole(null);
     setCurrentAccountId(null);
@@ -565,9 +636,15 @@ export default function App() {
         };
       }
 
+      const token = sessionStorage.getItem("qrisk_token");
+      const headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const response = await fetch(QRISK_API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify({
           disease_type: selectedDisease,
           features: featuresToSend
@@ -747,16 +824,6 @@ export default function App() {
                   Register
                 </button>
               </div>
-
-              {authMode === "login" && seedCredentials && (
-                <div className="credentials-hint">
-                  <span>🔑 Demo credentials (this device only)</span>
-                  <p>{role === "admin"
-                    ? `${seedCredentials.admin.username} / ${seedCredentials.admin.password}`
-                    : `${seedCredentials.user.username} / ${seedCredentials.user.password}`}
-                  </p>
-                </div>
-              )}
 
               <form onSubmit={handleAuthSubmit} className="auth-form">
                 <div className="form-group">

@@ -40,6 +40,13 @@ from quantum_risk_model import QuantumFeatureMap
 
 import os
 
+# --- PostgreSQL integration ---
+from database.connection import engine, verify_connection
+from database import models as db_models
+from routers import auth as auth_router
+from routers import history as history_router
+from routers import admin as admin_router
+
 app = FastAPI(title="QRISK Prediction API")
 
 allowed_origin = os.getenv("ALLOWED_ORIGIN", "*")
@@ -50,6 +57,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Create all PostgreSQL tables on startup (idempotent — safe to call repeatedly)
+@app.on_event("startup")
+def create_tables():
+    try:
+        db_models.Base.metadata.create_all(bind=engine)
+        ok = verify_connection()
+        print(f"[DB] Tables created. Connection verified: {ok}")
+    except Exception as exc:
+        print(f"[DB] WARNING: Could not create tables: {exc}")
+
+# Mount routers — existing /predict /health /diseases /features /sample-patients are unaffected
+app.include_router(auth_router.router,    prefix="/auth",        tags=["auth"])
+app.include_router(history_router.router, prefix="/predictions",  tags=["predictions"])
+app.include_router(admin_router.router,   prefix="/admin",        tags=["admin"])
 # CNN image screening (optional: stays off if image artifacts or torch are missing)
 try:
     from image.routes import router as image_router
