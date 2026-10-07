@@ -1,3 +1,4 @@
+import Landing from "./Landing";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import QuantumBackground from "./QuantumBackground.jsx";
 import ImageScreening from "./ImageScreening";
@@ -490,11 +491,11 @@ export default function App() {
         const data = await response.json();
         const token = data.access_token;
         sessionStorage.setItem("qrisk_token", token);
-        
+
         const meResponse = await fetch(`${API_BASE}/auth/me`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
-        
+
         if (meResponse.ok) {
           const meData = await meResponse.json();
           setCurrentAccountId(meData.account_id);
@@ -531,11 +532,11 @@ export default function App() {
       const data = await response.json();
       const token = data.access_token;
       sessionStorage.setItem("qrisk_token", token);
-      
+
       const meResponse = await fetch(`${API_BASE}/auth/me`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
-      
+
       if (meResponse.ok) {
         const meData = await meResponse.json();
         setCurrentAccountId(meData.account_id);
@@ -743,6 +744,9 @@ export default function App() {
   // ---------------------------------------------------------------------------
   // VIEW 1: AUTHENTICATION GATEWAY
   // ---------------------------------------------------------------------------
+  if (!isAuthenticated && !role) {
+    return <Landing onSelectRole={handleRoleSelect} />;
+  }
   if (!isAuthenticated) {
     return (
       <div className="auth-wrapper">
