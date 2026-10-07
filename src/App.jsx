@@ -615,7 +615,7 @@ export default function App() {
 
   const handleSaveToQueue = () => {
     if (!calculatedRisk || calculatedRisk.saved) return;
-    
+
     const prefix = selectedDisease === "breast_cancer" ? "BC" : "DB";
     const newId = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -630,7 +630,7 @@ export default function App() {
       priority: calculatedRisk.priority,
       createdAt: new Date().toISOString()
     };
-    
+
     setCalculatedRisk({ ...calculatedRisk, saved: true });
     setPatients([newPatient, ...patients]);
     // Add entry to logs
@@ -678,7 +678,7 @@ export default function App() {
         <div className="auth-card">
           <div className="auth-header">
             <div className="auth-logo">🌸</div>
-            <h1>QRISK</h1>
+            <h1>QureML</h1>
             <p>Early Disease Prediction Portal</p>
           </div>
 
@@ -1169,9 +1169,9 @@ export default function App() {
                     </div>
 
                     {calculatedRisk.imputed_features && calculatedRisk.imputed_features.length > 0 && (
-                      <div className="auth-error" style={{backgroundColor: "var(--hiq-card-hover)", color: "var(--text-main)", marginBottom: "1.25rem", textAlign: "left", padding: "0.8rem", borderRadius: "8px", lineHeight: "1.4"}}>
-                        <span style={{color: "var(--hiq-warning)"}}>ℹ️</span> <strong>Note:</strong> The following features were left blank and estimated from dataset median: 
-                        <span style={{ color: "var(--hiq-muted)"}}> {calculatedRisk.imputed_features.map(f => featureLabelMap[f] || f).join(', ')}</span>
+                      <div className="auth-error" style={{ backgroundColor: "var(--hiq-card-hover)", color: "var(--text-main)", marginBottom: "1.25rem", textAlign: "left", padding: "0.8rem", borderRadius: "8px", lineHeight: "1.4" }}>
+                        <span style={{ color: "var(--hiq-warning)" }}>ℹ️</span> <strong>Note:</strong> The following features were left blank and estimated from dataset median:
+                        <span style={{ color: "var(--hiq-muted)" }}> {calculatedRisk.imputed_features.map(f => featureLabelMap[f] || f).join(', ')}</span>
                       </div>
                     )}
 
@@ -1186,21 +1186,21 @@ export default function App() {
                             ...f,
                             displayLabel: f.related_features.map(raw => featureLabelMap[raw] || raw).join(" / ")
                           }))
-                          .filter((f, index, self) => 
+                          .filter((f, index, self) =>
                             self.findIndex(t => t.displayLabel === f.displayLabel) === index
                           )
                           .slice(0, 3)
                           .map((f, i) => (
-                          <div className="factor-row" key={i}>
-                            <span title={f.displayLabel}>{f.displayLabel}</span>
-                            <div className="factor-track">
-                              <div
-                                className={`factor-fill ${f.direction === "raises risk" ? "fill-high" : "fill-low"}`}
-                                style={{ width: `${Math.min(95, Math.max(10, Math.abs(f.impact) * 300))}%` }}
-                              />
+                            <div className="factor-row" key={i}>
+                              <span title={f.displayLabel}>{f.displayLabel}</span>
+                              <div className="factor-track">
+                                <div
+                                  className={`factor-fill ${f.direction === "raises risk" ? "fill-high" : "fill-low"}`}
+                                  style={{ width: `${Math.min(95, Math.max(10, Math.abs(f.impact) * 300))}%` }}
+                                />
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
 
                       </div>
                     ) : (
