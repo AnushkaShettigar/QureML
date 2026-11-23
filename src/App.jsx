@@ -40,71 +40,6 @@ const initialLogs = [
   { id: "LOG-883", user: "dr_khushu", action: "Accessed Patient Database Queue", timestamp: "3 hours ago" }
 ];
 
-// ---------------------------------------------------------------------------
-// ACCOUNT SYSTEM: password hashing + persisted login store (replaces OTP demo)
-// ---------------------------------------------------------------------------
-
-// Lightweight deterministic hash so raw passwords are never written to
-// localStorage. This is a client-only demo, not a substitute for real
-// server-side hashing (bcrypt/argon2) in a production system.
-function hashPassword(password) {
-  let hash = 5381;
-  for (let i = 0; i < password.length; i++) {
-    hash = ((hash << 5) + hash) + password.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36) + "-" + password.length.toString(36);
-}
-
-function generateAccountId(role) {
-  const prefix = role === "admin" ? "ADM" : "USR";
-  const num = Math.floor(1000 + Math.random() * 9000);
-  return `${prefix}-${num}`;
-}
-
-function generatePassword() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-  let out = "";
-  for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
-
-const ACCOUNTS_KEY = "qrisk_accounts_v1";
-
-// Seeds one ready-to-use admin account and one ready-to-use user account
-// with freshly generated IDs and passwords, so the portal is usable without
-// a manual registration step.
-function seedDefaultAccounts() {
-  // Set your preferred static credentials here
-  const adminPassword = "123456";
-  const userPassword = "123456";
-
-  const accounts = [
-    {
-      accountId: "ADM-1001",
-      username: "admin",
-      email: "admin@qrisk.local",
-      passwordHash: hashPassword(adminPassword),
-      role: "admin"
-    },
-    {
-      accountId: "USR-1002",
-      username: "user",
-      email: "user@qrisk.local",
-      passwordHash: hashPassword(userPassword),
-      role: "user"
-    }
-  ];
-
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
-  localStorage.setItem("qrisk_seed_credentials_v1", JSON.stringify({
-    admin: { username: "admin", password: adminPassword },
-    user: { username: "user", password: userPassword }
-  }));
-
-  return accounts;
-}
-
 export default function App() {
   // Interactive quantum background — landing page only
   const [activeCard, setActiveCard] = useState(null);
@@ -144,12 +79,6 @@ export default function App() {
   const [authData, setAuthData] = useState({ username: "", email: "", password: "", confirmPassword: "" });
   const [currentAccountId, setCurrentAccountId] = useState(null);
 
-  const [accounts, setAccounts] = useState(() => {
-    const saved = localStorage.getItem(ACCOUNTS_KEY);
-    if (saved) return JSON.parse(saved);
-    return seedDefaultAccounts();
-  });
-
   useEffect(() => {
     const restoreSession = async () => {
       const token = sessionStorage.getItem("qrisk_token");
@@ -174,14 +103,12 @@ export default function App() {
     restoreSession();
   }, []);
 
-  const [seedCredentials] = useState(() => {
-    const saved = localStorage.getItem("qrisk_seed_credentials_v1");
-    return saved ? JSON.parse(saved) : null;
-  });
-
+  // Older versions kept a browser-side account list and a default login in plain
+  // text. Real accounts live on the server now, so remove those leftovers.
   useEffect(() => {
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
-  }, [accounts]);
+    localStorage.removeItem("qrisk_accounts_v1");
+    localStorage.removeItem("qrisk_seed_credentials_v1");
+  }, []);
 
   // App Settings (Settings page)
   const [settings, setSettings] = useState(() => {
@@ -780,7 +707,6 @@ export default function App() {
   const totalPatients = patients.length;
   const highCount = patients.filter(p => p.priority === "High").length;
   const modCount = patients.filter(p => p.priority === "Moderate").length;
-  const lowCount = patients.filter(p => p.priority === "Low").length;
   const avgRisk = totalPatients ? Math.round(patients.reduce((s, p) => s + (p.riskScore || 0), 0) / totalPatients) : 0;
   const highPct = totalPatients ? Math.round((highCount / totalPatients) * 100) : 0;
   const modPct = totalPatients ? Math.round((modCount / totalPatients) * 100) : 0;

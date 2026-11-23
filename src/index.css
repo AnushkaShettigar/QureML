@@ -262,26 +262,6 @@ h3 {
   border-bottom: 2px solid var(--primary-pink);
 }
 
-.credentials-hint {
-  background: rgba(201, 140, 160, 0.08);
-  border: 1px solid rgba(201, 140, 160, 0.25);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1.25rem;
-  font-size: 0.8rem;
-}
-
-.credentials-hint span {
-  color: var(--neon-cyan);
-  font-weight: 600;
-}
-
-.credentials-hint p {
-  color: var(--text-main);
-  font-family: monospace;
-  margin-top: 0.3rem;
-}
-
 .auth-form {
   display: flex;
   flex-direction: column;
@@ -357,7 +337,6 @@ h3 {
 /* Dashboard Layout */
 .dashboard-layout {
   display: flex;
-  min-height: 100vh;
 }
 
 .sidebar {
@@ -631,25 +610,6 @@ h3 {
   margin-bottom: 1rem;
 }
 
-.account-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  margin-bottom: 0.5rem;
-}
-
-.account-info p {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.9rem;
-  border-bottom: 1px solid var(--glass-border);
-  padding-bottom: 0.5rem;
-}
-
-.account-info p span {
-  color: var(--text-muted);
-}
-
 .setting-row {
   display: flex;
   align-items: center;
@@ -661,12 +621,6 @@ h3 {
 
 .setting-row:last-child {
   border-bottom: none;
-}
-
-.setting-row-stacked {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.6rem;
 }
 
 .setting-title {
@@ -952,24 +906,17 @@ h3 {
 /* Sidebar */
 .dashboard-layout .sidebar {
   width: 260px;
-  background: var(--hiq-sidebar);
   border-right: 1px solid var(--hiq-border);
 }
 
 .dashboard-layout .brand-icon {
-  width: 40px;
-  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--hiq-blue), var(--hiq-blue-dark));
-  border-radius: 11px;
   color: #fff;
-  box-shadow: var(--hiq-shadow);
 }
 
 .dashboard-layout .brand h2 {
-  font-size: 1.15rem;
   letter-spacing: -0.02em;
 }
 
@@ -1015,10 +962,6 @@ h3 {
   background: var(--hiq-danger-soft);
   border: 1px solid transparent;
   color: var(--hiq-danger);
-}
-
-.dashboard-layout .logout-btn:hover {
-  background: rgba(239, 75, 98, 0.22);
 }
 
 /* Main content */
@@ -1180,10 +1123,6 @@ h3 {
 }
 
 /* Sparkline chart */
-.chart-card .sparkline {
-  width: 100%;
-  height: 160px;
-}
 
 /* Interactive risk-history chart */
 .risk-history-chart {
@@ -1335,17 +1274,6 @@ h3 {
   border-radius: 8px;
 }
 
-.dashboard-layout .form-group input:hover,
-.dashboard-layout .form-group select:hover {
-  border-color: var(--hiq-blue);
-}
-
-.dashboard-layout .form-group input:focus,
-.dashboard-layout .form-group select:focus {
-  border-color: var(--hiq-blue);
-  box-shadow: 0 0 0 3px var(--hiq-blue-soft);
-}
-
 .dashboard-layout .action-btn,
 .dashboard-layout .save-btn,
 .dashboard-layout .link-btn.action-btn {
@@ -1469,17 +1397,14 @@ h3 {
 
 .dashboard-layout .badge-high {
   background: var(--hiq-danger-soft);
-  color: var(--hiq-danger);
 }
 
 .dashboard-layout .badge-moderate {
   background: var(--hiq-warning-soft);
-  color: var(--hiq-warning);
 }
 
 .dashboard-layout .badge-low {
   background: var(--hiq-success-soft);
-  color: var(--hiq-success);
 }
 
 .dashboard-layout .filter-group button {
@@ -1618,20 +1543,6 @@ h3 {
   padding: 0.65rem 1.1rem;
 }
 
-.report-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  font-size: 0.88rem;
-  color: var(--hiq-text);
-}
-
-.report-list li {
-  padding-bottom: 0.4rem;
-  border-bottom: 1px dashed var(--hiq-border);
-}
-
 .report-footer {
   margin-top: 1.5rem;
   padding-top: 1rem;
@@ -1641,13 +1552,8 @@ h3 {
 }
 
 /* Settings (dashboard-scoped) */
-.dashboard-layout .account-info p,
 .dashboard-layout .setting-row {
   border-bottom: 1px solid var(--hiq-border);
-}
-
-.dashboard-layout .account-info p span {
-  color: var(--hiq-muted);
 }
 
 .dashboard-layout .setting-title {
@@ -1671,12 +1577,7 @@ h3 {
   box-shadow: 0 0 0 4px var(--hiq-blue-soft);
 }
 
-.dashboard-layout .range-slider {
-  background: var(--hiq-border);
-}
-
 .dashboard-layout .range-slider::-webkit-slider-thumb {
-  background: var(--hiq-blue);
   border-color: #fff;
 }
 
@@ -1685,7 +1586,6 @@ h3 {
 }
 
 .dashboard-layout .range-slider::-moz-range-thumb {
-  background: var(--hiq-blue);
   border-color: #fff;
 }
 
@@ -1893,7 +1793,6 @@ h3 {
   display: flex;
   justify-content: center;
   color: var(--primary-pink, #c8617f);
-  filter: drop-shadow(0 4px 14px rgba(200, 97, 127, 0.45));
 }
 
 .role-icon {
@@ -2217,16 +2116,6 @@ h3 {
 }
 
 /* Account rows: label left, value right, subtle hover */
-.dashboard-layout .account-info p {
-  align-items: center;
-  padding: 0.55rem 0.6rem;
-  border-radius: 8px;
-  transition: background 0.15s ease;
-}
-
-.dashboard-layout .account-info p:hover {
-  background: var(--hiq-blue-soft);
-}
 
 /* Settings rows: gentle hover so the list feels interactive */
 .dashboard-layout .setting-row {
@@ -2422,16 +2311,16 @@ h3 {
 }
 
 /* Index helper: --n = position among siblings (used for staggered delays) */
-:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .account-info, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(1)  { --n: 0; }
-:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .account-info, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(2)  { --n: 1; }
-:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .account-info, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(3)  { --n: 2; }
-:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .account-info, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(4)  { --n: 3; }
-:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .account-info, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(5)  { --n: 4; }
-:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .account-info, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(6)  { --n: 5; }
-:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .account-info, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(7)  { --n: 6; }
-:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .account-info, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(8)  { --n: 7; }
-:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .account-info, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(9)  { --n: 8; }
-:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .account-info, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(10) { --n: 9; }
+:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(1)  { --n: 0; }
+:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(2)  { --n: 1; }
+:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(3)  { --n: 2; }
+:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(4)  { --n: 3; }
+:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(5)  { --n: 4; }
+:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(6)  { --n: 5; }
+:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(7)  { --n: 6; }
+:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(8)  { --n: 7; }
+:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(9)  { --n: 8; }
+:is(.intake-form, .results-wrapper, .imgscreen, .report-kv, .auth-form, .nav-menu, .donut-legend, .pipeline-flow) > :nth-child(10) { --n: 9; }
 .card-panel > .setting-row:nth-of-type(1) { --n: 0; }
 .card-panel > .setting-row:nth-of-type(2) { --n: 1; }
 .card-panel > .setting-row:nth-of-type(3) { --n: 2; }
@@ -2732,7 +2621,6 @@ h3 {
 }
 
 /* ==== SETTINGS ============================================================== */
-.dashboard-layout .account-info > p,
 .dashboard-layout .auth-form > *,
 .dashboard-layout .card-panel > .setting-row {
   animation: hiq-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
@@ -3036,7 +2924,6 @@ h3 {
   }
 }
 
-
 /* ==========================================================================
    FLOWER LOGO (animated pixel flower, same animation as the landing page)
    ========================================================================== */
@@ -3071,7 +2958,6 @@ h3 {
     animation: none !important;
   }
 }
-
 
 /* ==========================================================================
    SIDEBAR REFRESH
@@ -3225,7 +3111,6 @@ h3 {
   .nav-badge, .sys-status, .sys-dot { animation: none !important; }
 }
 
-
 /* ==========================================================================
    IMAGE SCREENING PAGE
    ========================================================================== */
@@ -3243,14 +3128,6 @@ h3 {
   color: var(--hiq-accent-text);
   background: var(--hiq-blue-soft);
   border: 1px solid rgba(223, 130, 163, 0.3);
-}
-
-.imgscreen .img-pipeline {
-  margin-bottom: 1.5rem;
-}
-
-.imgscreen .img-pipeline .pipeline-flow {
-  margin-top: 0.2rem;
 }
 
 .imgscreen .img-grid {
@@ -3398,7 +3275,6 @@ h3 {
   padding: 0.75rem 0.9rem;
   border-radius: 10px;
   font-size: 0.85rem;
-  color: var(--hiq-danger);
   background: var(--hiq-danger-soft);
   border: 1px solid rgba(239, 75, 98, 0.35);
   animation: hiq-rise 0.35s ease backwards;
@@ -3456,13 +3332,11 @@ h3 {
 }
 
 .img-verdict.is-agree {
-  color: var(--hiq-success);
   background: var(--hiq-success-soft);
   border: 1px solid rgba(22, 185, 129, 0.35);
 }
 
 .img-verdict.is-disagree {
-  color: var(--hiq-warning);
   background: var(--hiq-warning-soft);
   border: 1px solid rgba(245, 165, 36, 0.4);
 }
@@ -3511,8 +3385,8 @@ h3 {
   font-weight: 700;
 }
 
-.mc-label-high { color: var(--hiq-danger);  background: var(--hiq-danger-soft); }
-.mc-label-low  { color: var(--hiq-success); background: var(--hiq-success-soft); }
+.mc-label-high {  background: var(--hiq-danger-soft); }
+.mc-label-low  { background: var(--hiq-success-soft); }
 
 .mc-bar {
   height: 7px;
@@ -3629,7 +3503,6 @@ h3 {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--hiq-success);
   background: var(--hiq-success-soft);
 }
 
@@ -3675,7 +3548,6 @@ h3 {
 @media (max-width: 700px) {
   .img-skeletons { grid-template-columns: 1fr; }
 }
-
 
 /* ==========================================================================
    THEME SWITCH (day / night pill)
@@ -3844,7 +3716,6 @@ h3 {
   .ts-thumb { transition-duration: 0.01ms !important; animation: none !important; }
 }
 
-
 /* ==========================================================================
    DASHBOARD GREETING
    ========================================================================== */
@@ -3921,9 +3792,9 @@ h3 {
   animation-delay: 0.47s;
 }
 
-.greet-chip.chip-high     { color: var(--hiq-danger);  background: var(--hiq-danger-soft);  border-color: rgba(239, 75, 98, 0.4); }
-.greet-chip.chip-moderate { color: var(--hiq-warning); background: var(--hiq-warning-soft); border-color: rgba(245, 165, 36, 0.4); }
-.greet-chip.chip-low      { color: var(--hiq-success); background: var(--hiq-success-soft); border-color: rgba(22, 185, 129, 0.4); }
+.greet-chip.chip-high     {  background: var(--hiq-danger-soft);  border-color: rgba(239, 75, 98, 0.4); }
+.greet-chip.chip-moderate { background: var(--hiq-warning-soft); border-color: rgba(245, 165, 36, 0.4); }
+.greet-chip.chip-low      { background: var(--hiq-success-soft); border-color: rgba(22, 185, 129, 0.4); }
 
 .dashboard-layout .greet-cta {
   width: auto;
@@ -3935,7 +3806,6 @@ h3 {
 @media (prefers-reduced-motion: reduce) {
   .greet-chip { animation: none !important; }
 }
-
 
 /* ==========================================================================
    LIGHT-MODE READABILITY FIXES
@@ -3982,29 +3852,12 @@ h3 {
 /* Heartbeat line is too faint on a white background */
 .dashboard-layout:not(.theme-dark) .hiq-ecg-base { opacity: 0.3; }
 
-
 /* ==========================================================================
    SETTINGS PAGE (side menu + one panel at a time)
    ========================================================================== */
 .settings-layout {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  gap: 1.5rem;
   align-items: start;
-}
-
-.settings-nav {
-  position: sticky;
-  top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.6rem;
-  border-radius: var(--hiq-radius);
-  background: var(--hiq-card);
-  border: 1px solid var(--hiq-border);
-  box-shadow: var(--hiq-shadow);
-  animation: hiq-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .settings-tab {
@@ -4066,10 +3919,6 @@ h3 {
 .settings-tab:focus-visible {
   outline: 2px solid var(--hiq-accent-text);
   outline-offset: 2px;
-}
-
-.settings-panel {
-  min-height: 420px;
 }
 
 .sp-head {
@@ -4161,52 +4010,6 @@ h3 {
   color: var(--hiq-accent-text);
   background: var(--hiq-blue-soft);
   border: 1px solid rgba(223, 130, 163, 0.3);
-}
-
-.set-chip-btn {
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.15s ease;
-}
-
-.set-chip-btn:hover {
-  background: rgba(223, 130, 163, 0.28);
-}
-
-.set-chip-btn:active {
-  transform: scale(0.96);
-}
-
-.copy-tip {
-  font-size: 0.68rem;
-  opacity: 0.7;
-}
-
-.set-kv {
-  margin: 0 0 1.25rem;
-  display: flex;
-  flex-direction: column;
-}
-
-.set-kv > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.8rem 0.4rem;
-  border-bottom: 1px solid var(--hiq-border);
-}
-
-.set-kv > div:last-child {
-  border-bottom: none;
-}
-
-.set-kv dt {
-  color: var(--hiq-muted);
-  font-size: 0.88rem;
-}
-
-.set-kv dd {
-  margin: 0;
-  font-weight: 600;
 }
 
 .set-row-card {
@@ -4599,12 +4402,6 @@ h3 {
   .settings-layout {
     grid-template-columns: 1fr;
   }
-  .settings-nav {
-    position: static;
-    flex-direction: row;
-    overflow-x: auto;
-    scrollbar-width: thin;
-  }
   .settings-tab {
     width: auto;
     flex-shrink: 0;
@@ -4625,7 +4422,6 @@ h3 {
 @media (prefers-reduced-motion: reduce) {
   .zone, .saved-pill, .pw-meter span { transition-duration: 0.01ms !important; }
 }
-
 
 /* ==========================================================================
    SETTINGS: tabs across the top (no second sidebar) + profile details
@@ -4751,7 +4547,6 @@ h3 {
   }
 }
 
-
 /* ==========================================================================
    SIDEBAR PINNED TO THE SCREEN
    The sidebar used to stretch to the full height of long pages (e.g. Image
@@ -4780,7 +4575,6 @@ h3 {
     flex-shrink: 0;
   }
 }
-
 
 /* ==========================================================================
    LOGO: pixel-art flower needs whole-number scaling (24px grid -> 48 / 72px)

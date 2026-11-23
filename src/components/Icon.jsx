@@ -36,26 +36,6 @@ const PATHS = {
 };
 
 export default function Icon({ name, size = 20, className = "", ...rest }) {
-  // Brand mark: a five-petal bloom (filled), replaces the flower emoji.
-  if (name === "bloom") {
-    return (
-      <svg
-        className={`icon icon-bloom ${className}`}
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        aria-hidden="true"
-        {...rest}
-      >
-        {[0, 72, 144, 216, 288].map((deg) => (
-          <ellipse key={deg} cx="12" cy="6.4" rx="2.7" ry="4" fillOpacity="0.9" transform={`rotate(${deg} 12 12)`} />
-        ))}
-        <circle cx="12" cy="12" r="2.1" fill="var(--hiq-card, #fff)" fillOpacity="0.95" />
-      </svg>
-    );
-  }
-
   const body = PATHS[name];
   if (!body) return null;
   return (
