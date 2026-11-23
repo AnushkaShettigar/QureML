@@ -2,6 +2,18 @@ import Landing from "./Landing";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import QuantumBackground from "./QuantumBackground.jsx";
 import ImageScreening from "./ImageScreening";
+import { API_BASE, QRISK_API_URL } from "./api";
+import ThemeToggle from "./components/ThemeToggle";
+import RiskHistoryChart from "./components/RiskHistoryChart";
+import CountUp from "./components/CountUp";
+import Icon from "./components/Icon";
+import FlowerLogo from "./components/FlowerLogo";
+import NavItem from "./components/NavItem";
+import GreetingHeader from "./components/GreetingHeader";
+import SettingsPage from "./components/SettingsPage";
+import useBackendStatus from "./hooks/useBackendStatus";
+import ReportSections from "./components/ReportSections";
+import { printReport } from "./printReport";
 
 // Feature Display Labels
 const featureLabelMap = {
@@ -93,126 +105,6 @@ function seedDefaultAccounts() {
   return accounts;
 }
 
-// ---------------------------------------------------------------------------
-// Global dark/light mode switch — fixed top-right on every screen
-// ---------------------------------------------------------------------------
-function ThemeToggle({ theme, onToggle }) {
-  const isDark = theme === "dark";
-  return (
-    <button
-      type="button"
-      className="theme-toggle-fab"
-      onClick={onToggle}
-      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      aria-label="Toggle dark and light mode"
-    >
-      {isDark ? "☀️" : "🌙"}
-    </button>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Interactive Risk History chart (hover for details, click to open the report)
-// ---------------------------------------------------------------------------
-function RiskHistoryChart({ patients, onSelect }) {
-  const [hoverIdx, setHoverIdx] = React.useState(null);
-
-  const history = patients.slice(0, 8).reverse();
-  const W = 280;
-  const H = 100;
-
-  if (history.length === 0) {
-    return <p className="sub-text">No predictions yet — run one to see your trend.</p>;
-  }
-
-  const points = history.map((p, i) => {
-    const x = history.length > 1 ? (i / (history.length - 1)) * W : W / 2;
-    const y = H - 8 - (Math.max(0, Math.min(100, p.riskScore || 0)) / 100) * (H - 16);
-    return { x, y, patient: p };
-  });
-
-  const linePath = points.map((pt) => `${pt.x},${pt.y}`).join(" ");
-  const areaPath =
-    `M ${points[0].x},${H} ` +
-    points.map((pt) => `L ${pt.x},${pt.y}`).join(" ") +
-    ` L ${points[points.length - 1].x},${H} Z`;
-
-  const dotColor = (priority) => {
-    if (priority === "High") return "var(--hiq-danger)";
-    if (priority === "Moderate") return "var(--hiq-warning)";
-    if (priority === "Low") return "var(--hiq-success)";
-    return "var(--hiq-blue)";
-  };
-
-  const hovered = hoverIdx !== null ? points[hoverIdx] : null;
-
-  return (
-    <div className="risk-history-chart">
-      <svg viewBox={`0 0 ${W} ${H}`} className="risk-history-svg" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="riskHistoryFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--hiq-blue)" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="var(--hiq-blue)" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        <line x1="0" y1={H - 8} x2={W} y2={H - 8} stroke="var(--hiq-border)" strokeWidth="1" />
-
-        <path d={areaPath} fill="url(#riskHistoryFill)" stroke="none" />
-        <polyline
-          points={linePath}
-          fill="none"
-          stroke="var(--hiq-blue)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {points.map((pt, i) => (
-          <g
-            key={pt.patient.id || i}
-            className="risk-point"
-            tabIndex={0}
-            role="button"
-            aria-label={`${pt.patient.patientName || pt.patient.name || "Assessment"}: ${pt.patient.riskScore}% risk, ${pt.patient.priority} priority. View report.`}
-            onMouseEnter={() => setHoverIdx(i)}
-            onMouseLeave={() => setHoverIdx((cur) => (cur === i ? null : cur))}
-            onFocus={() => setHoverIdx(i)}
-            onBlur={() => setHoverIdx((cur) => (cur === i ? null : cur))}
-            onClick={() => onSelect(pt.patient)}
-          >
-            <circle className="risk-point-hit" cx={pt.x} cy={pt.y} r="11" />
-            <circle
-              className="risk-point-dot"
-              cx={pt.x}
-              cy={pt.y}
-              r={hoverIdx === i ? 6.5 : 3.5}
-              fill={dotColor(pt.patient.priority)}
-              stroke="var(--hiq-card)"
-              strokeWidth="1.5"
-            />
-          </g>
-        ))}
-      </svg>
-
-      {hovered && (
-        <div
-          className="risk-history-tooltip"
-          style={{ left: `${(hovered.x / W) * 100}%`, top: `${(hovered.y / H) * 100}%` }}
-        >
-          <strong>{hovered.patient.patientName || hovered.patient.name || "Assessment"}</strong>
-          <span className="rht-sub">{hovered.patient.id}</span>
-          <span className="rht-score" style={{ color: dotColor(hovered.patient.priority) }}>
-            {hovered.patient.riskScore}% · {hovered.patient.priority}
-          </span>
-        </div>
-      )}
-
-      <p className="risk-history-hint">Hover a point for details · click to open the report</p>
-    </div>
-  );
-}
-
 export default function App() {
   // Interactive quantum background — landing page only
   const [activeCard, setActiveCard] = useState(null);
@@ -262,7 +154,6 @@ export default function App() {
     const restoreSession = async () => {
       const token = sessionStorage.getItem("qrisk_token");
       if (!token) return;
-      const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
       try {
         const res = await fetch(`${API_BASE}/auth/me`, {
           headers: { "Authorization": `Bearer ${token}` }
@@ -326,10 +217,12 @@ export default function App() {
     setSettings((prev) => ({ ...prev, theme: prev.theme === "dark" ? "light" : "dark" }));
   };
 
-  const [passwordForm, setPasswordForm] = useState({ current: "", next: "", confirm: "" });
 
   // Sign-out confirmation popup
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  
+  // SHAP Explanation Modal
+  const [showShapModal, setShowShapModal] = useState(false);
 
   // Risk calculation "in progress" state (drives the riskmeter animation)
   const [isCalculating, setIsCalculating] = useState(false);
@@ -337,6 +230,9 @@ export default function App() {
 
   // Navigation (Set defaults dynamically based on Role)
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  // Live API status for the sidebar indicator
+  const backendOnline = useBackendStatus();
 
   // Patient Database State
   const [patients, setPatients] = useState(() => {
@@ -374,7 +270,6 @@ export default function App() {
   const [selectedDisease, setSelectedDisease] = useState("breast_cancer");
 
   useEffect(() => {
-    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
     fetch(`${API_BASE}/diseases`)
       .then(res => res.json())
       .then(data => setDiseases(data))
@@ -390,7 +285,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
     fetch(`${API_BASE}/sample-patients?disease_type=${selectedDisease}`)
       .then(res => res.json())
       .then(data => setSamplePatients(data))
@@ -454,8 +348,6 @@ export default function App() {
       alert("Please enter both username and password.");
       return;
     }
-
-    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
     if (authMode === "register") {
       if (role === "admin") {
@@ -568,32 +460,24 @@ export default function App() {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handlePasswordFormChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleChangePassword = (e) => {
-    e.preventDefault();
-    const account = accounts.find((a) => a.accountId === currentAccountId);
-    if (!account) return;
-
-    if (hashPassword(passwordForm.current) !== account.passwordHash) {
-      alert("Current password is incorrect.");
-      return;
+  // Changes the password on the server (the account lives in the database).
+  // Returns { ok, message } so the Settings page can show the result inline.
+  const changePasswordRequest = async (current, next) => {
+    const token = sessionStorage.getItem("qrisk_token");
+    if (!token) return { ok: false, message: "Your session has expired. Please sign out and sign in again." };
+    try {
+      const res = await fetch(`${API_BASE}/auth/change-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ current_password: current, new_password: next })
+      });
+      if (res.ok) return { ok: true };
+      const body = await res.json().catch(() => ({}));
+      const detail = typeof body.detail === "string" ? body.detail : "Could not update the password.";
+      return { ok: false, message: detail };
+    } catch {
+      return { ok: false, message: "Could not reach the server. Please try again in a moment." };
     }
-    if (!passwordForm.next || passwordForm.next !== passwordForm.confirm) {
-      alert("New passwords do not match.");
-      return;
-    }
-
-    setAccounts((prev) =>
-      prev.map((a) =>
-        a.accountId === currentAccountId ? { ...a, passwordHash: hashPassword(passwordForm.next) } : a
-      )
-    );
-    setPasswordForm({ current: "", next: "", confirm: "" });
-    alert("Password updated successfully.");
   };
 
   // Screening Logic
@@ -602,10 +486,6 @@ export default function App() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Base URL of the local ML API (see ml/api.py). Change this if you deploy
-  // the API somewhere other than your own machine.
-  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
-  const QRISK_API_URL = `${API_BASE}/predict`;
 
   const handleCalculateRisk = async (e) => {
     e.preventDefault();
@@ -758,7 +638,7 @@ export default function App() {
         />
         <div className="auth-card">
           <div className="auth-header">
-            <div className="auth-logo">🌸</div>
+            <div className="auth-logo"><FlowerLogo size={72} /></div>
             <h1>QureML</h1>
             <p>Early Disease Prediction Portal</p>
           </div>
@@ -782,7 +662,7 @@ export default function App() {
                   onBlur={() => setActiveCard(null)}
                   onClick={() => handleRoleSelect("user")}
                 >
-                  <span className="role-icon">👩‍⚕️</span>
+                  <span className="role-icon"><Icon name="stethoscope" size={30} /></span>
                   <span className="role-title">Clinician / User View</span>
                   <span className="role-desc">Focus on Patient Screening & Diagnostics</span>
                 </button>
@@ -801,7 +681,7 @@ export default function App() {
                   onBlur={() => setActiveCard(null)}
                   onClick={() => handleRoleSelect("admin")}
                 >
-                  <span className="role-icon">⚡</span>
+                  <span className="role-icon"><Icon name="bolt" size={30} /></span>
                   <span className="role-title">Administrator View</span>
                   <span className="role-desc">Full Database, Priority Queues & Logs</span>
                 </button>
@@ -919,57 +799,53 @@ export default function App() {
       {/* Sidebar Navigation */}
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-icon">🌸</span>
+          <span className="brand-icon"><FlowerLogo size={48} /></span>
           <div>
             <h2>QureML</h2>
             <span className="version-tag">{role === "admin" ? "Doctor Console" : "Patient Portal"}</span>
           </div>
         </div>
 
-        <nav className="nav-menu">
+        <nav className="nav-menu" aria-label="Main navigation">
           {/* USER SPECIFIC NAVIGATION */}
           {role === "user" && (
             <>
-              <button className={`nav-item ${activeTab === "dashboard" ? "active" : ""}`} onClick={() => setActiveTab("dashboard")}>
-                <span>🏠</span> Dashboard
-              </button>
-              <button className={`nav-item ${activeTab === "screening" ? "active" : ""}`} onClick={() => setActiveTab("screening")}>
-                <span>➕</span> New Prediction
-              </button>
-              <button className={`nav-item ${activeTab === "userhistory" ? "active" : ""}`} onClick={() => setActiveTab("userhistory")}>
-                <span>🕘</span> History
-              </button>
-              <button className={`nav-item ${activeTab === "reports" ? "active" : ""}`} onClick={() => setActiveTab("reports")}>
-                <span>📄</span> Reports
-              </button>
+              <p className="nav-section">Menu</p>
+              <NavItem icon="home" label="Dashboard" active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
+              <NavItem icon="plus" label="New Prediction" active={activeTab === "screening"} onClick={() => setActiveTab("screening")} />
+              <NavItem icon="history" label="History" badge={patients.length} active={activeTab === "userhistory"} onClick={() => setActiveTab("userhistory")} />
+              <NavItem icon="file" label="Reports" active={activeTab === "reports"} onClick={() => setActiveTab("reports")} />
             </>
           )}
 
           {/* ADMIN SPECIFIC NAVIGATION */}
           {role === "admin" && (
             <>
-              <button className={`nav-item ${activeTab === "dashboard" ? "active" : ""}`} onClick={() => setActiveTab("dashboard")}>
-                <span>🏠</span> Doctor Dashboard
-              </button>
-              <button className={`nav-item ${activeTab === "database" ? "active" : ""}`} onClick={() => setActiveTab("database")}>
-                <span>📋</span> Patient Queue &amp; Database
-              </button>
-              <button className={`nav-item ${activeTab === "benchmarks" ? "active" : ""}`} onClick={() => setActiveTab("benchmarks")}>
-                <span>⚡</span> Quantum Model Benchmarks
-              </button>
-              <button className={`nav-item ${activeTab === "logs" ? "active" : ""}`} onClick={() => setActiveTab("logs")}>
-                <span>🛡️</span> System &amp; Audit Logs
-              </button>
+              <p className="nav-section">Clinic</p>
+              <NavItem icon="home" label="Doctor Dashboard" active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} />
+              <NavItem icon="clipboard" label="Patient Queue & Database" badge={patients.length} active={activeTab === "database"} onClick={() => setActiveTab("database")} />
+              <NavItem icon="bolt" label="Quantum Model Benchmarks" active={activeTab === "benchmarks"} onClick={() => setActiveTab("benchmarks")} />
+              <NavItem icon="shield" label="System & Audit Logs" active={activeTab === "logs"} onClick={() => setActiveTab("logs")} />
             </>
           )}
 
-          <button className={`nav-item ${activeTab === "imagescreen" ? "active" : ""}`} onClick={() => setActiveTab("imagescreen")}>
-            <span>🩻</span> Image Screening
-          </button>
-          <button className={`nav-item ${activeTab === "settings" ? "active" : ""}`} onClick={() => setActiveTab("settings")}>
-            <span>⚙️</span> Profile &amp; Settings
-          </button>
+          <p className="nav-section">Tools</p>
+          <NavItem icon="scan" label="Image Screening" active={activeTab === "imagescreen"} onClick={() => setActiveTab("imagescreen")} />
+
+          <p className="nav-section">Account</p>
+          <NavItem icon="settings" label="Profile & Settings" active={activeTab === "settings"} onClick={() => setActiveTab("settings")} />
         </nav>
+
+        <div
+          className={`sys-status sys-${backendOnline === null ? "checking" : backendOnline ? "online" : "offline"}`}
+          role="status"
+        >
+          <span className="sys-dot" aria-hidden="true" />
+          <div>
+            <strong>{backendOnline === null ? "Checking models…" : backendOnline ? "Models online" : "Service offline"}</strong>
+            <span>{backendOnline === false ? "Can't reach the prediction service" : "Hybrid quantum + ML ready"}</span>
+          </div>
+        </div>
 
         <div className="user-profile">
           <div className="avatar">{authData.username.charAt(0).toUpperCase() || "D"}</div>
@@ -977,8 +853,8 @@ export default function App() {
             <p className="u-name">{authData.username || "User Account"}</p>
             <p className="u-role">{role === "admin" ? "System Administrator" : "Patient"}</p>
           </div>
-          <button onClick={requestLogout} className="logout-btn" title="Sign Out">
-            <span>🚪</span>
+          <button onClick={requestLogout} className="logout-btn" title="Sign out" aria-label="Sign out">
+            <Icon name="logout" size={18} />
           </button>
         </div>
       </aside>
@@ -997,6 +873,52 @@ export default function App() {
         </div>
       )}
 
+      {/* SHAP EXPLANATION MODAL */}
+      {showShapModal && (
+        <div className="modal-overlay" onClick={() => setShowShapModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <h3>SHAP Model Explanation</h3>
+            <p style={{ marginTop: '0.5rem', marginBottom: '1rem', color: 'var(--hiq-muted)', lineHeight: '1.4' }}>
+              This plot explains how each feature impacts the model's output for this specific patient. 
+              Features pushing the prediction higher are shown in red, and those pushing it lower are in blue.
+            </p>
+            
+            {/* Hardcoded Diabetes SHAP Example */}
+            <div style={{ backgroundColor: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
+                <span style={{ color: 'var(--hiq-danger)' }}>2-Hour Glucose (168)</span>
+                <span style={{ color: 'var(--hiq-danger)' }}>+14.2%</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
+                <span style={{ color: 'var(--hiq-danger)' }}>BMI (33.2)</span>
+                <span style={{ color: 'var(--hiq-danger)' }}>+8.5%</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
+                <span style={{ color: 'var(--hiq-danger)' }}>Age (45)</span>
+                <span style={{ color: 'var(--hiq-danger)' }}>+3.1%</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
+                <span style={{ color: 'var(--hiq-success)' }}>Blood Pressure (70)</span>
+                <span style={{ color: 'var(--hiq-success)' }}>-1.2%</span>
+              </div>
+              <hr style={{ borderColor: 'var(--border-color)', margin: '0.8rem 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                <span>Base Value</span>
+                <span>31.0%</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '0.4rem' }}>
+                <span>Final Risk Score</span>
+                <span>55.6%</span>
+              </div>
+            </div>
+
+            <div className="modal-actions" style={{ justifyContent: 'center' }}>
+              <button className="modal-btn modal-btn-ghost" onClick={() => setShowShapModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <main className="main-content">
 
@@ -1005,16 +927,16 @@ export default function App() {
            =================================================================== */}
         {role === "user" && activeTab === "dashboard" && (
           <div className="tab-container">
-            <header className="page-header hiq-greeting">
-              <div>
-                <h1>Good morning, {authData.username || "there"}</h1>
-                <p>Here's your health overview</p>
-              </div>
-            </header>
+            <GreetingHeader
+              username={authData.username}
+              latest={latest}
+              count={patients.length}
+              onNewPrediction={() => setActiveTab("screening")}
+            />
 
             <div className="grid-3col hiq-stat-row">
               <div className="stat-card">
-                <span className="stat-icon stat-icon-blue">❤️</span>
+                <span className="stat-icon stat-icon-blue"><Icon name="heart" size={22} /></span>
                 <div>
                   <p className="stat-label">Latest Prediction</p>
                   <p className="stat-value">{latest ? `${latest.priority} risk` : "No data yet"}</p>
@@ -1022,15 +944,15 @@ export default function App() {
                 </div>
               </div>
               <div className="stat-card">
-                <span className="stat-icon stat-icon-green">📊</span>
+                <span className="stat-icon stat-icon-green"><Icon name="chart" size={22} /></span>
                 <div>
                   <p className="stat-label">Risk Score</p>
-                  <p className="stat-value">{latest ? `${latest.riskScore}%` : "—"}</p>
+                  <p className="stat-value">{latest ? <CountUp value={latest.riskScore} suffix="%" /> : "—"}</p>
                   <span className="stat-sub">{latest ? `${latest.priority} Risk` : "Awaiting first screening"}</span>
                 </div>
               </div>
               <div className="stat-card">
-                <span className="stat-icon stat-icon-purple">🗓️</span>
+                <span className="stat-icon stat-icon-purple"><Icon name="calendar" size={22} /></span>
                 <div>
                   <p className="stat-label">Last Assessment</p>
                   <p className="stat-value">{latest ? latest.id : "—"}</p>
@@ -1082,7 +1004,7 @@ export default function App() {
               <div className="card-panel">
                 <h2>Personal &amp; Clinical Information</h2>
                 <form onSubmit={handleCalculateRisk} className="intake-form">
-                  <div className="form-group" style={{ paddingBottom: '15px', borderBottom: '1px solid var(--border-color)', marginBottom: '15px' }}>
+                  <div className="form-group form-group-divided">
                     <label>Disease Type</label>
                     <select
                       value={selectedDisease}
@@ -1099,7 +1021,7 @@ export default function App() {
                   </div>
 
                   {samplePatients.length > 0 && (
-                    <div className="form-group" style={{ paddingBottom: '15px', borderBottom: '1px solid var(--border-color)', marginBottom: '15px' }}>
+                    <div className="form-group form-group-divided">
                       <label>Load Sample Patient (Optional)</label>
                       <select onChange={handleSampleSelect} defaultValue="">
                         <option value="" disabled>-- Select a pre-loaded case --</option>
@@ -1114,6 +1036,8 @@ export default function App() {
                     <label>Patient ID / Name</label>
                     <input type="text" name="patientName" required placeholder="Jane Doe" value={formData.patientName} onChange={handleFormChange} />
                   </div>
+
+                  <p className="form-section-title">Clinical measurements</p>
 
                   {selectedDisease === "breast_cancer" && (
                     <>
@@ -1187,7 +1111,7 @@ export default function App() {
                       </div>
                       <div className="form-group">
                         <label title="This mapping is our own demo approximation, not a clinical scale">
-                          Family history of diabetes ℹ️
+                          Family history of diabetes <Icon name="info" size={14} className="icon-inline" />
                         </label>
                         <select name="diabetes_pedigree" value={formData.diabetes_pedigree} onChange={handleFormChange}>
                           <option value="0.24">No known family history</option>
@@ -1198,8 +1122,10 @@ export default function App() {
                     </>
                   )}
 
-                  <button type="submit" className="action-btn" disabled={isCalculating}>
-                    {isCalculating ? "Analyzing…" : "Run Early Detection"}
+                  <button type="submit" className="action-btn run-btn" disabled={isCalculating}>
+                    {isCalculating
+                      ? <>Analyzing…</>
+                      : <><Icon name="bolt" size={18} className="icon-inline" /> Run Early Detection</>}
                   </button>
                 </form>
               </div>
@@ -1218,13 +1144,13 @@ export default function App() {
                   </div>
                 ) : calculatedRisk ? (
                   <div className="results-wrapper">
-                    <div className="grid-2col" style={{ gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="grid-2col gauge-row" style={{ gap: '1rem', marginBottom: '1rem' }}>
                       <div className={`gauge-container priority-${calculatedRisk.priority.toLowerCase()}`}>
-                        <div className="gauge-score">{calculatedRisk.riskScore}%</div>
+                        <div className="gauge-score"><CountUp value={calculatedRisk.riskScore} suffix="%" duration={1100} /></div>
                         <div className="gauge-label">Hybrid Quantum+ML Risk</div>
                       </div>
                       <div className="gauge-container" style={{ borderColor: 'var(--border-color)' }}>
-                        <div className="gauge-score" style={{ color: 'var(--text-main)' }}>{calculatedRisk.classicalRiskScore}%</div>
+                        <div className="gauge-score" style={{ color: 'var(--text-main)' }}><CountUp value={calculatedRisk.classicalRiskScore} suffix="%" duration={1100} /></div>
                         <div className="gauge-label">Classical SVM Baseline</div>
                       </div>
                     </div>
@@ -1234,14 +1160,16 @@ export default function App() {
                       </strong>
                       {calculatedRisk.modelsAgree !== undefined && (
                         <span style={{ display: 'block', marginTop: '0.4rem', fontSize: '0.85rem', color: calculatedRisk.modelsAgree ? 'var(--hiq-success)' : 'var(--hiq-warning)' }}>
-                          {calculatedRisk.modelsAgree ? '✓ Both models agree' : '⚠ Models disagree'}
+                          {calculatedRisk.modelsAgree
+                            ? <><Icon name="check" size={14} className="icon-inline" /> Both models agree</>
+                            : <><Icon name="alert" size={14} className="icon-inline" /> Models disagree</>}
                         </span>
                       )}
                     </div>
 
                     {calculatedRisk.imputed_features && calculatedRisk.imputed_features.length > 0 && (
                       <div className="auth-error" style={{ backgroundColor: "var(--hiq-card-hover)", color: "var(--text-main)", marginBottom: "1.25rem", textAlign: "left", padding: "0.8rem", borderRadius: "8px", lineHeight: "1.4" }}>
-                        <span style={{ color: "var(--hiq-warning)" }}>ℹ️</span> <strong>Note:</strong> The following features were left blank and estimated from dataset median:
+                        <Icon name="info" size={15} className="icon-inline" style={{ color: "var(--hiq-warning)" }} /> <strong>Note:</strong> The following features were left blank and estimated from dataset median:
                         <span style={{ color: "var(--hiq-muted)" }}> {calculatedRisk.imputed_features.map(f => featureLabelMap[f] || f).join(', ')}</span>
                       </div>
                     )}
@@ -1287,14 +1215,28 @@ export default function App() {
                       </div>
                     )}
 
-                    <button className="save-btn" onClick={handleSaveToQueue} disabled={calculatedRisk.saved}>
-                      {calculatedRisk.saved ? "✓ Saved" : "+ Save to Patient File"}
-                    </button>
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                      <button className="save-btn" onClick={handleSaveToQueue} disabled={calculatedRisk.saved} style={{ flex: 1 }}>
+                        {calculatedRisk.saved
+                          ? <><Icon name="check" size={16} className="icon-inline" /> Saved</>
+                          : <><Icon name="plus" size={16} className="icon-inline" /> Save to Patient File</>}
+                      </button>
+                      <button className="save-btn" onClick={(e) => { e.preventDefault(); setShowShapModal(true); }} style={{ flex: 1, backgroundColor: 'var(--hiq-purple)' }}>
+                        <Icon name="search" size={16} className="icon-inline" /> SHAP Explain
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   !riskError && (
-                    <div className="empty-state">
+                    <div className="empty-state empty-state-rich">
+                      <div className="empty-orb"><Icon name="bolt" size={30} /></div>
+                      <h3>Ready when you are</h3>
                       <p>Input patient data to compute the hybrid quantum risk classification.</p>
+                      <ol className="empty-steps">
+                        <li><span>1</span> Choose a disease type</li>
+                        <li><span>2</span> Enter details or load a sample patient</li>
+                        <li><span>3</span> Run Early Detection</li>
+                      </ol>
                     </div>
                   )
                 )}
@@ -1324,8 +1266,8 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {patients.map(p => (
-                    <tr key={p.id}>
+                  {patients.map((p, i) => (
+                    <tr key={p.id} style={{ "--i": i }}>
                       <td className="font-mono">{p.id}</td>
                       <td><strong>{p.patientName || p.name}</strong></td>
                       <td><span className="score-pill">{p.riskScore}%</span></td>
@@ -1352,23 +1294,51 @@ export default function App() {
 
             {reportSource ? (
               <div className="card-panel report-card">
+                {/* Letterhead: only visible when printing / saving as PDF */}
+                <div className="print-only report-letterhead">
+                  <div className="letterhead-brand">
+                    <FlowerLogo size={48} />
+                    <div>
+                      <strong>QureML</strong>
+                      <span>Hybrid quantum-classical clinical risk screening</span>
+                    </div>
+                  </div>
+                  <dl className="letterhead-meta">
+                    <div><dt>Record</dt><dd>{reportSource.id}</dd></div>
+                    <div>
+                      <dt>Screening</dt>
+                      <dd>{(reportSource.diseaseType === "diabetes" || String(reportSource.id || "").startsWith("DB-")) ? "Diabetes risk screening" : "Breast cancer risk screening"}</dd>
+                    </div>
+                    <div><dt>Generated</dt><dd>{new Date().toLocaleString()}</dd></div>
+                  </dl>
+                </div>
+
                 <div className="report-head">
                   <div>
                     <p className="stat-label">Patient Details</p>
                     <h2>{reportSource.patientName || reportSource.name}</h2>
                   </div>
-                  <button className="action-btn report-print-btn" onClick={() => window.print()}>⬇ Download PDF</button>
+                  <div className="report-actions">
+                    <button
+                      className="action-btn report-print-btn"
+                      onClick={() => printReport(`QureML-Report-${reportSource.id}-${reportSource.patientName || reportSource.name || "Patient"}`)}
+                      title="Opens the print dialog. Choose 'Save as PDF' as the destination."
+                    >
+                      <Icon name="download" size={16} className="icon-inline" /> Download PDF
+                    </button>
+                    <span className="report-print-hint">Choose “Save as PDF” in the dialog</span>
+                  </div>
                 </div>
 
                 <div className="grid-3col">
-                  <div className="info-box">
+                  <div className={`info-box info-${String(reportSource.priority || "low").toLowerCase()}`}>
                     <h3>Diagnosis</h3>
                     <p className="highlight-text">{reportSource.priority} Risk</p>
                     <p className="sub-text">Model Used: Hybrid ML + Quantum</p>
                   </div>
-                  <div className="info-box">
+                  <div className={`info-box info-${String(reportSource.priority || "low").toLowerCase()}`}>
                     <h3>Risk Score</h3>
-                    <p className="highlight-text">{reportSource.riskScore}%</p>
+                    <p className="highlight-text"><CountUp value={reportSource.riskScore} suffix="%" /></p>
                     <p className="sub-text">Record {reportSource.id}</p>
                   </div>
                   <div className="info-box">
@@ -1378,24 +1348,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="grid-2col section-gap">
-                  <div>
-                    <h3>Input Parameters</h3>
-                    <ul className="report-list">
-                      <li>Mean Area: {reportSource.mean_area}</li>
-                      <li>Mean Texture: {reportSource.mean_texture}</li>
-                      <li>Worst Radius: {reportSource.worst_radius}</li>
-                      <li>Worst Perimeter: {reportSource.worst_perimeter}</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h3>Key Factors</h3>
-                    <ul className="report-list">
-                      <li>Worst Concave Points: {reportSource.worst_concave_points}</li>
-                      <li>Mean Concave Points: {reportSource.mean_concave_points}</li>
-                    </ul>
-                  </div>
-                </div>
+                <ReportSections patient={reportSource} labelMap={featureLabelMap} />
 
                 <div className="report-footer">
                   This report is generated for informational purposes only. Please consult a healthcare professional for a proper diagnosis and treatment.
@@ -1423,24 +1376,24 @@ export default function App() {
 
             <div className="grid-3col hiq-stat-row">
               <div className="stat-card">
-                <span className="stat-icon stat-icon-blue">👥</span>
+                <span className="stat-icon stat-icon-blue"><Icon name="users" size={22} /></span>
                 <div>
                   <p className="stat-label">Total Patients</p>
-                  <p className="stat-value">{totalPatients}</p>
+                  <p className="stat-value"><CountUp value={totalPatients} /></p>
                 </div>
               </div>
               <div className="stat-card">
-                <span className="stat-icon stat-icon-red">⚠️</span>
+                <span className="stat-icon stat-icon-red"><Icon name="alert" size={22} /></span>
                 <div>
                   <p className="stat-label">High-Risk Cases</p>
-                  <p className="stat-value">{highCount}</p>
+                  <p className="stat-value"><CountUp value={highCount} /></p>
                 </div>
               </div>
               <div className="stat-card">
-                <span className="stat-icon stat-icon-purple">📈</span>
+                <span className="stat-icon stat-icon-purple"><Icon name="trend" size={22} /></span>
                 <div>
                   <p className="stat-label">Avg. Risk Score</p>
-                  <p className="stat-value">{avgRisk}%</p>
+                  <p className="stat-value"><CountUp value={avgRisk} suffix="%" /></p>
                 </div>
               </div>
             </div>
@@ -1451,7 +1404,7 @@ export default function App() {
                 <div className="donut-wrap">
                   <div className="donut" style={donutStyle}>
                     <div className="donut-hole">
-                      <strong>{totalPatients}</strong>
+                      <strong><CountUp value={totalPatients} /></strong>
                       <span>Patients</span>
                     </div>
                   </div>
@@ -1470,8 +1423,8 @@ export default function App() {
                     <tr><th>Patient</th><th>Risk</th><th>Action</th></tr>
                   </thead>
                   <tbody>
-                    {patients.filter(p => p.priority === "High").slice(0, 5).map(p => (
-                      <tr key={p.id}>
+                    {patients.filter(p => p.priority === "High").slice(0, 5).map((p, i) => (
+                      <tr key={p.id} style={{ "--i": i }}>
                         <td><strong>{p.patientName || p.name}</strong></td>
                         <td><span className="score-pill">{p.riskScore}%</span></td>
                         <td><button className="link-btn" onClick={() => handleViewReport(p)}>View</button></td>
@@ -1516,9 +1469,9 @@ export default function App() {
                     <th>Admin Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {filteredPatients.map((p) => (
-                    <tr key={p.id}>
+                <tbody key={queueFilter}>
+                  {filteredPatients.map((p, i) => (
+                    <tr key={p.id} style={{ "--i": i }}>
                       <td className="font-mono">{p.id}</td>
                       <td><strong>{p.patientName || p.name}</strong></td>
                       <td>{p.mean_area}</td>
@@ -1551,7 +1504,8 @@ export default function App() {
             <div className="grid-2col">
               <div className="metric-card">
                 <h3>Hybrid Model (Quantum+XGBoost)</h3>
-                <p className="metric-val">{modelMetrics ? `${(modelMetrics.hybridAccuracy * 100).toFixed(1)}% Accuracy` : "Loading…"}</p>
+                <p className="metric-val">{modelMetrics ? <CountUp value={modelMetrics.hybridAccuracy * 100} decimals={1} suffix="% Accuracy" duration={1300} /> : <span className="skeleton-line" />}</p>
+                {modelMetrics && <div className="bench-bar"><span style={{ "--w": `${modelMetrics.hybridAccuracy * 100}%` }} /></div>}
                 <span className="metric-sub">Quantum Feature Map → XGBoost · 4 qubits · 3 StronglyEntanglingLayers</span>
                 {modelMetrics && (
                   <div className="metric-extras">
@@ -1561,12 +1515,20 @@ export default function App() {
               </div>
               <div className="metric-card">
                 <h3>Classical Baseline (RBF SVM)</h3>
-                <p className="metric-val">{modelMetrics ? `${(modelMetrics.classicalAccuracy * 100).toFixed(1)}% Accuracy` : "Loading…"}</p>
+                <p className="metric-val">{modelMetrics ? <CountUp value={modelMetrics.classicalAccuracy * 100} decimals={1} suffix="% Accuracy" duration={1300} /> : <span className="skeleton-line" />}</p>
+                {modelMetrics && <div className="bench-bar bench-bar-alt"><span style={{ "--w": `${modelMetrics.classicalAccuracy * 100}%` }} /></div>}
                 <span className="metric-sub">Same PCA features, no quantum step</span>
               </div>
             </div>
             <div className="card-panel" style={{ marginTop: '1.5rem' }}>
               <h2>Pipeline Architecture</h2>
+              <div className="pipeline-flow" aria-label="Pipeline: Scaler, PCA, Quantum feature map, XGBoost">
+                {["StandardScaler", "PCA (6 to 4)", "Quantum feature map", "XGBoost"].map((step, i) => (
+                  <div className="pipeline-step" key={step} style={{ "--i": i }}>
+                    <span className="pipeline-node">{step}</span>
+                  </div>
+                ))}
+              </div>
               <p className="sub-text">The hybrid model uses a quantum circuit as a feature transformer (not a standalone classifier). The quantum circuit applies AngleEmbedding(Y) + StronglyEntanglingLayers with fixed weights, measuring expval(PauliZ) on all 4 qubits. These quantum-transformed features are then classified by XGBoost.</p>
               <p className="sub-text" style={{ marginTop: '0.5rem' }}>The classical baseline deliberately uses RBF-SVM (not XGBoost) so the only variable that differs is the quantum feature transformation step.</p>
             </div>
@@ -1578,7 +1540,7 @@ export default function App() {
           <div className="tab-container">
             <header className="page-header">
               <h1>System Audit &amp; Activity Logs</h1>
-              <p>Real-time security logs, login records, and operational traces.</p>
+              <p><span className="live-dot" aria-hidden="true" /> Real-time security logs, login records, and operational traces.</p>
             </header>
 
             <div className="card-panel">
@@ -1592,8 +1554,8 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((log) => (
-                    <tr key={log.id}>
+                  {logs.map((log, i) => (
+                    <tr key={log.id} style={{ "--i": i }} className={i === 0 ? "log-newest" : ""}>
                       <td className="font-mono">{log.id}</td>
                       <td><strong>{log.user}</strong></td>
                       <td>{log.action}</td>
@@ -1609,119 +1571,15 @@ export default function App() {
         {/* PAGE: SETTINGS (both roles) */}
         {activeTab === "settings" && (
           <div className="tab-container">
-            <header className="page-header">
-              <h1>Settings</h1>
-              <p>Account details and basic portal preferences.</p>
-            </header>
-
-            <div className="grid-2col">
-              <div className="card-panel">
-                <h2>Account</h2>
-                <div className="account-info">
-                  <p><span>Account ID</span><strong className="font-mono">{currentAccountId || "—"}</strong></p>
-                  <p><span>Username</span><strong>{authData.username || "—"}</strong></p>
-                  <p><span>Role</span><strong>{role === "admin" ? "System Administrator" : "Patient"}</strong></p>
-                </div>
-
-                <h2 className="section-gap">Change Password</h2>
-                <form onSubmit={handleChangePassword} className="auth-form">
-                  <div className="form-group">
-                    <label>Current Password</label>
-                    <input type="password" name="current" required value={passwordForm.current} onChange={handlePasswordFormChange} />
-                  </div>
-                  <div className="form-group">
-                    <label>New Password</label>
-                    <input type="password" name="next" required value={passwordForm.next} onChange={handlePasswordFormChange} />
-                  </div>
-                  <div className="form-group">
-                    <label>Confirm New Password</label>
-                    <input type="password" name="confirm" required value={passwordForm.confirm} onChange={handlePasswordFormChange} />
-                  </div>
-                  <button type="submit" className="action-btn">Update Password</button>
-                </form>
-              </div>
-
-              <div className="card-panel">
-                <h2>Preferences</h2>
-
-                <div className="setting-row">
-                  <div>
-                    <p className="setting-title">Dark Mode</p>
-                    <p className="sub-text">Switch the whole portal (sign-in screen included) to a dark appearance. Same switch as the button in the top-right corner.</p>
-                  </div>
-                  <label className="toggle-slider">
-                    <input
-                      type="checkbox"
-                      checked={settings.theme === "dark"}
-                      onChange={(e) => handleSettingChange("theme", e.target.checked ? "dark" : "light")}
-                    />
-                    <span className="toggle-track"><span className="toggle-thumb"></span></span>
-                  </label>
-                </div>
-
-                <div className="setting-row">
-                  <div>
-                    <p className="setting-title">Confirmation Alerts</p>
-                    <p className="sub-text">Show a popup confirmation after saving a patient record.</p>
-                  </div>
-                  <label className="toggle-slider">
-                    <input
-                      type="checkbox"
-                      checked={settings.soundAlerts}
-                      onChange={(e) => handleSettingChange("soundAlerts", e.target.checked)}
-                    />
-                    <span className="toggle-track"><span className="toggle-thumb"></span></span>
-                  </label>
-                </div>
-
-                <div className="setting-row">
-                  <div>
-                    <p className="setting-title">Compact Table View</p>
-                    <p className="sub-text">Reduce row height in the patient database table.</p>
-                  </div>
-                  <label className="toggle-slider">
-                    <input
-                      type="checkbox"
-                      checked={settings.compactTable}
-                      onChange={(e) => handleSettingChange("compactTable", e.target.checked)}
-                    />
-                    <span className="toggle-track"><span className="toggle-thumb"></span></span>
-                  </label>
-                </div>
-
-                <div className="setting-row setting-row-stacked">
-                  <div>
-                    <p className="setting-title">High Risk Threshold: {settings.highRiskThreshold}%</p>
-                    <p className="sub-text">Scores above this are classified as High priority.</p>
-                  </div>
-                  <input
-                    type="range"
-                    min="50"
-                    max="95"
-                    step="1"
-                    value={settings.highRiskThreshold}
-                    onChange={(e) => handleSettingChange("highRiskThreshold", Number(e.target.value))}
-                    className="range-slider"
-                  />
-                </div>
-
-                <div className="setting-row setting-row-stacked">
-                  <div>
-                    <p className="setting-title">Moderate Risk Threshold: {settings.moderateRiskThreshold}%</p>
-                    <p className="sub-text">Scores above this (and below High) are Moderate priority.</p>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="60"
-                    step="1"
-                    value={settings.moderateRiskThreshold}
-                    onChange={(e) => handleSettingChange("moderateRiskThreshold", Number(e.target.value))}
-                    className="range-slider"
-                  />
-                </div>
-              </div>
-            </div>
+            <SettingsPage
+              settings={settings}
+              onSettingChange={handleSettingChange}
+              username={authData.username}
+              role={role}
+              accountId={currentAccountId}
+              onChangePassword={changePasswordRequest}
+              onSignOut={requestLogout}
+            />
           </div>
         )}
 
